@@ -1,45 +1,137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link href="https://fonts.cdnfonts.com/css/mbaloloness" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jim Lam's Landing Page</title>
-    <style>
-        * {
-            font-family: 'Mbaloloness', sans-serif;
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Mbaloloness', sans-serif;
-            text-align: center;
-            background: linear-gradient(45deg, #ff6b6b, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997, #51cf66, #94d82d, #fcc419, #ff922b);
-            background-size: 300% 300%;
-            animation: gradient 10s ease infinite;
-            color: white;
-        }
-
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        h1 {
-            font-size: 3em;
-            margin-top: 20%;
-        }
-
-        p {
-            font-size: 1.5em;
-        }
-    </style>
+    <title>Jim Lam - CV</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Welcome to Jim Lam's Page!</h1>
-    <p>Jim Lam is a fun Computer Science student.</p>
+    <header>
+        <h1>Jim Lam</h1>
+        <p>
+            &#128231; <a href="mailto:jim.sebastian.lam@gmail.com">jim.sebastian.lam@gmail.com</a> |
+            &#127979; <a href="mailto:jl03093@surrey.ac.uk">jl03093@surrey.ac.uk</a>
+        </p>
+        <p>
+            <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a> |
+            <a href="https://github.com/sebastianlam">GitHub</a> |
+            &#128222; +44 7754 525567
+        </p>
+    </header>
+
+    <section id="skills">
+        <h2>Skills</h2>
+        <p><strong>Languages:</strong> English (IELTS 8.5), Cantonese (Native), German (Intermediate), Mandarin (Fluent)</p>
+        <p><strong>Technical Proficiencies:</strong></p>
+        <ul>
+            <li><strong>Software Development:</strong> Project Coordination, Documentation, Test-Driven Development (TDD)</li>
+            <li><strong>Programming Languages:</strong> Python, Node.js, Java, LaTeX, Clojure(Script), SQL, HTML, CSS, PHP, Shell Scripting, Swift, Haskell, Prolog</li>
+            <li><strong>Frameworks & Libraries:</strong> Vue.js, Flutter, Three.js, SwiftUI, Express.js</li>
+            <li><strong>Version Control:</strong> Git</li>
+            <li><strong>Cloud Platforms:</strong> AWS (Route 53, S3, EC2), OCI (Compute Instance), Heroku</li>
+            <li><strong>Design Tools:</strong> 3D Modeling (Blender, Rhino, SketchUp, AutoCAD) and 2D Design (Adobe InDesign, Illustrator)</li>
+        </ul>
+    </section>
+
+    <section id="experience">
+        <h2>Experience</h2>
+        <div class="experience-item">
+            <h3>University of Surrey -- LAB Pal for COM1026 & Buddy Scheme Mentor <span class="right">Present</span></h3>
+            <p>Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achievement learning environment.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>Sports Vision -- Computer Vision Lead <span class="right">Present</span></h3>
+            <p>Architected and spearheaded the development of a computer vision backend for a visual snooker scoring system using YOLO. Designed and implemented a custom image annotation tool with PySide-6 and currently driving synthetic data generation via the Blender Python API to enhance system accuracy.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>Next Token Solutions -- Software Engineer <span class="right">October 2020 -- December 2022</span></h3>
+            <ul>
+                <li>Supported web development for Finmonster, a fintech platform designed for local SME loan matching.</li>
+                <li>Automated server management tasks on AWS using Shell scripting to streamline operations.</li>
+                <li>Performed comprehensive platform maintenance and executed a successful stack migration, utilizing a diverse technology stack:
+                    <ul>
+                        <li><strong>Frontend:</strong> PHP, jQuery, and enhanced features implemented with Vue.js</li>
+                        <li><strong>Backend:</strong> PHP alongside refactored logic in Clojure</li>
+                        <li><strong>Infrastructure (AWS):</strong> MySQL database, S3, and Apache on EC2</li>
+                    </ul>
+                </li>
+                <li>Fulfilled a key project coordination role by gathering client requirements, and preparing and presenting effective proposals.</li>
+                <li>Drove mobile app development by writing an internal Product Handbook App demo in both Flutter and iOS native, and rewriting legacy Next Token React Native apps with Flutter.</li>
+            </ul>
+        </div>
+
+        <div class="experience-item">
+            <h3>Tommax -- Part-Time Developer <span class="right">June 2020 -- October 2020</span></h3>
+            <p>Collaborated directly with clients on e-commerce solutions and PHP web development projects. Enhanced company communications by providing strategic translation services and producing region-specific subtitling for marketing campaigns.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>English Tutor <span class="right">Q2 2021 -- Present</span></h3>
+            <p>Deliver tailored, advanced-level English tutoring with a focus on STEM terminology, significantly improving students' technical vocabulary and domain knowledge.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>Barangaroo Promenade Pavilion Design Competition -- Team Member <span class="right">Summer 2020</span></h3>
+            <p>Jointly Put Forward A Pavilion Design Competition Entry With A Holistic Approach To Create A Functional Public Shelter, Through A Supersized Parametric Take Of The Aboriginal Coolamon.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>HKU Decacorn Entrepreneurial Camp Case Competition -- Finalist <span class="right">June 2018</span></h3>
+            <p>Conceived and pitched a comprehensive startup proposal for an intergrated knowledge and graduate headhunting platform within 24 hours, grounded on strategic insight form business students and industry advisors from the University of Hong Kong.</p>
+        </div>
+
+        <div class="experience-item">
+            <h3>“Innonation” Live Music Company -- Audio Assistant <span class="right">December 2018</span></h3>
+            <p>Managed live audio equipment installations for high-profile events, including weddings, concerts, and corporate functions across Hong Kong, ensuring reliable operational performance under demading time and physical constraints.</p>
+        </div>
+    </section>
+
+    <section id="personal-projects">
+        <h2>Personal Projects</h2>
+        <div class="project-item">
+            <h3>URL+ <span class="right">Present</span></h3>
+            <p>Key contributor to the only ClojureScript plugin for Logseq, an innovative open-source note-taking platform. Developed features to retrieve and organize URL responses and deliver dictionary-style definitions, leveraging Rum and TailwindCSS for a dynamic user experience.</p>
+        </div>
+
+        <div class="project-item">
+            <h3>DrunkGPT <span class="right">Present</span></h3>
+            <p>Developed an accessibility-centric, command-line LLM client featuring a pioneering voice interface, significantly enhancing user interaction and accessibility.</p>
+        </div>
+    </section>
+
+    <section id="education">
+        <h2>Education</h2>
+        <div class="education-item">
+            <h3>University of Surrey <span class="right">September 2023 -- August 2027, Guildford</span></h3>
+            <p>BSc (Hons.) in Computer Science with PTY</p>
+            <p>Year one aggregate: 86.13%</p>
+            <p>TT&amp;C (Telemetry, tracking, and Command) team lead for the <strong>Peryton Space Society</strong> UKSEDS satellite design competition entry.</p>
+            <ul>
+                <li><strong>Hardware:</strong> Optimised the comms configuration of the satellite to maximise connection resilience by various means (e.g. antenna selection, error correction, and compression).</li>
+                <li><strong>Software:</strong> Developed ground station software to interface with the satellite, including a telemetry dashboard and a command interface.</li>
+            </ul>
+            <p>Active member of the <strong>University of Surrey Mountaineering Club</strong>.</p>
+        </div>
+
+        <div class="education-item">
+            <h3>University of Sydney <span class="right">January 2019 -- August 2020, Sydney</span></h3>
+            <p>Bachelor of Design in Architecture (Hons.)</p>
+        </div>
+
+        <div class="education-item">
+            <h3>Diocesan Boys’ School <span class="right">September 2014 -- August 2018, Hong Kong</span></h3>
+            <p>Academic Electives: Physics, Chemistry, Biology</p>
+        </div>
+    </section>
+
+    <section id="interests">
+        <h2>Interests</h2>
+        <p>Bouldering/Climbing (V7/7A+), Debating, Piano Improv, Flight Simulation (X-Plane 12)</p>
+    </section>
+
+    <script src="script.js"></script>
 </body>
 </html>
