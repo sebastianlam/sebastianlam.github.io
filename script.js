@@ -6,26 +6,27 @@ const cvContainer = document.getElementById('cv-container');
 cvContainer.appendChild(renderer.domElement);
 
 const planes = [];
-const sectionSpacing = 3; // Increased spacing
+const sectionSpacing = 1; // Increased spacing
 let currentYOffset = 0;
 let totalHeight = 0; // To track the total height of all sections
 
 const metallicMaterial = new THREE.MeshStandardMaterial({
-    color: 0xaaaaaa,
-    metalness: 0.8,
-    roughness: 0.3,
+    color: 0xffffff,
+    metalness: 0.5,
+    roughness: 0.5,
     side: THREE.DoubleSide
+    
 });
 
 const font = 'Georgia'; // Set the default font
 
 // Function to create a texture from HTML content
-function createTextureFromHTML(htmlContent, width = 512, height = 512) {
+function createTextureFromHTML(htmlContent, width = 1024, height = 512) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f0f0f0'; // Background color of the plane
+    ctx.fillStyle = '#ffffff'; // Background color of the plane
     ctx.fillRect(0, 0, width, height);
     ctx.font = `20px ${font}`; // Set font style
     ctx.fillStyle = '#333'; // Text color
@@ -61,7 +62,7 @@ function createTextureFromHTML(htmlContent, width = 512, height = 512) {
     Array.from(tempDiv.children).forEach(getTextNodes);
 
     let y = 50;
-    const lineHeight = 25;
+    const lineHeight = 20;
     textLines.forEach(line => {
         const words = line.split(' ');
         let currentLine = '';
