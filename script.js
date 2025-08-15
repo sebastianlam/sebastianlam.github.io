@@ -30,6 +30,25 @@ const observer = new IntersectionObserver((entries) => {
 
 sections.forEach(section => observer.observe(section));
 
+// Subtle reveal on scroll
+const revealTargets = [
+    ...document.querySelectorAll('main section'),
+    ...document.querySelectorAll('.experience-item, .education-item, .project-item')
+];
+
+revealTargets.forEach(el => el.classList.add('reveal'));
+
+const revealObserver = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            obs.unobserve(entry.target);
+        }
+    });
+}, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+
+revealTargets.forEach(el => revealObserver.observe(el));
+
 // Theme toggle with persistence
 const root = document.documentElement;
 const themeToggleButton = document.getElementById('theme-toggle');
