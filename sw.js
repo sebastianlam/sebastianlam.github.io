@@ -1,4 +1,4 @@
-const CACHE = 'cv-cache-v2';
+const CACHE = 'cv-cache-v3';
 const ASSETS = [
     '/',
     '/index.html',
@@ -35,6 +35,9 @@ self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
     const isNavigate = req.mode === 'navigate';
+    const url = new URL(req.url);
+    const isSameOrigin = url.origin === location.origin;
+    const isCssJs = isSameOrigin && (url.pathname.endsWith('.css') || url.pathname.endsWith('.js') || url.pathname.endsWith('.webmanifest'));
     event.respondWith((async () => {
         const cache = await caches.open(CACHE);
         if (isNavigate) {
@@ -47,6 +50,20 @@ self.addEventListener('fetch', (event) => {
                 if (fallback) return fallback;
             }
         }
+        // Network-first for CSS/JS so style/script updates are not stuck behind cache
+        if (isCssJs) {
+            try {
+                const resp = await fetch(req);
+                cache.put(req, resp.clone());
+                return resp;
+            } catch (e) {
+                const cached = await cache.match(req);
+                if (cached) return cached;
+                const offline = await cache.match('/index.html');
+                return offline || Response.error();
+            }
+        }
+        // Cache-first for other requests (images, icons, etc.)
         const cached = await cache.match(req);
         if (cached) return cached;
         try {

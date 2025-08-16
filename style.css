@@ -13,6 +13,8 @@
     --hc-text: #ffffff;
     --hc-border: #ffffff;
 
+    /* Soft glow color for tasteful effects */
+    --glow: rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] {
@@ -25,6 +27,7 @@
     --card: transparent;
     --accent: rgba(255, 255, 255, 0.08);
     --shadow: 0 0 0 rgba(0,0,0,0);
+    --glow: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="hc"] {
@@ -36,6 +39,7 @@
     --primary-acc: var(--hc-text);
     --card: transparent;
     --accent: rgba(255,255,255,0.24);
+    --glow: rgba(255,255,255,0.24);
 }
 
 /* Base */
@@ -54,6 +58,20 @@ body {
     color: var(--text);
     background: var(--bg);
 }
+
+/* Ambient gradient backdrop (disabled in high-contrast) */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(800px 400px at 0% -10%, var(--accent), transparent 60%),
+        radial-gradient(800px 400px at 100% 110%, var(--accent), transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+[data-theme="hc"] body::before { display: none; }
 
 a {
     color: var(--primary);
@@ -76,11 +94,14 @@ a:hover {
     margin: 0 auto;
 }
 
+.layout { position: relative; z-index: 1; }
+
 @media (max-width: 900px) {
     .layout {
         grid-template-columns: 1fr;
         gap: 16px;
         padding: 16px;
+        z-index: auto; /* avoid unintended stacking over fixed elements on mobile */
     }
     .sidebar {
         position: static;
@@ -97,10 +118,7 @@ a:hover {
     padding-right: 20px;
 }
 
-.quick-actions {
-    display: flex;
-    gap: 6px;
-}
+.quick-actions { display: grid; gap: 6px; grid-auto-rows: 36px; }
 
 .profile h1 {
     font-size: 40px;
@@ -111,10 +129,16 @@ a:hover {
 
 .avatar img { width: 72px; height: 72px; border-radius: 16px; display: block; }
 
-.profile p {
-    margin: 6px 0;
-    color: var(--muted);
-}
+.profile p { margin: 6px 0; color: var(--muted); }
+
+/* Sidebar composition */
+.profile { display: grid; gap: 10px; }
+
+/* Contact block with tidy alignment */
+.contact { margin: 6px 0 2px 0; display: grid; grid-template-columns: 72px 1fr; align-items: baseline; column-gap: 10px; row-gap: 6px; }
+.contact dt { color: var(--muted); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.contact dd { margin: 0; color: var(--text); overflow-wrap: anywhere; word-break: break-word; }
+.middot { padding: 0 6px; color: var(--muted); }
 
 /* Unified button styling for action controls */
 #theme-toggle,
@@ -147,34 +171,61 @@ a:hover {
 }
 
 /* Add spacing only where appropriate */
-.quick-actions > button,
-.view-modes > button {
-    margin-top: 10px;
-}
+/* Make sidebar action buttons one-per-row and full width */
+.quick-actions > button { width: 100%; }
 
-.toc {
-    display: flex;
-    flex-direction: column;
-    margin-top: 18px;
-    gap: 4px;
-}
+.toc { display: flex; flex-direction: column; margin-top: 12px; gap: 2px; }
 
-.toc a {
-    padding: 8px 10px;
-    color: var(--muted);
-    border-left: 1px solid transparent; /* hairline */
-}
+.toc a { padding: 8px 10px; color: var(--muted); border-radius: 8px; }
 
-.toc a.active, .toc a:hover {
-    color: var(--text);
-    border-left-color: var(--primary);
-    background: transparent;
-}
+.toc a.active, .toc a:hover { color: var(--text); background-color: var(--accent); }
 
 .content {
     min-width: 0;
     max-width: 72ch; /* readable measure */
 }
+
+/* Classy underline animation for links in content and TOC */
+.content a, .toc a {
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition: background-size 200ms ease, color 200ms ease;
+}
+.content a:hover, .toc a:hover { background-size: 100% 1px; }
+
+/* Full border animation for TOC buttons */
+.toc a {
+    position: relative;
+    background-image: none;
+    background-size: auto;
+    background-position: auto;
+    background-repeat: auto;
+    z-index: 1;
+}
+
+.toc a::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: linear-gradient(red, red) padding-box,
+                linear-gradient(red, red) border-box;
+    background-size: 0% 0%;
+    background-repeat: no-repeat;
+    transition: background-size 200ms ease;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.toc a:hover::before {
+    background-size: 100% 100%;
+}
+
+
 
 section {
     margin-bottom: 64px;
@@ -233,6 +284,14 @@ li {
 
 .experience-item, .education-item, .project-item {
     margin-bottom: 18px;
+    transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+
+/* Subtle hover treatment for list items */
+.experience-item:hover, .education-item:hover, .project-item:hover {
+    background-color: var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--border) inset;
 }
 
 .experience-item ul, .education-item ul {
@@ -332,6 +391,9 @@ a:focus-visible, button:focus-visible {
     border-left: 1px solid var(--border);
 }
 
+/* Bottom-of-sidebar general hint */
+.sidebar-hint { margin-top: 12px; font-size: 12px; color: var(--muted); }
+
 .search-result {
     padding: 8px 10px;
     min-height: 32px;
@@ -341,7 +403,7 @@ a:focus-visible, button:focus-visible {
 
 .search-result:hover, .search-result[aria-selected="true"] {
     color: var(--text);
-    background: var(--accent);
+    background-color: var(--accent);
 }
 
 /* Filters and chips */
@@ -360,10 +422,11 @@ a:focus-visible, button:focus-visible {
 }
 .chip[aria-pressed="true"] { color: var(--text); border-color: var(--primary); background: var(--accent); }
 
-/* Focus mode toggle pressed state */
-.view-modes #focus-mode-toggle[aria-pressed="true"] {
+/* Focus mode toggle pressed state (now in quick-actions) */
+#focus-mode-toggle[aria-pressed="true"] {
     color: var(--text);
-    border-bottom: 1px solid var(--primary);
+    border: 1px solid var(--primary);
+    background: var(--accent);
 }
 
 
@@ -375,10 +438,20 @@ a:focus-visible, button:focus-visible {
 .timeline-title { font-size: 13px; }
 .timeline-meta { font-size: 12px; color: var(--muted); }
 
+@media (prefers-reduced-motion: no-preference) {
+    .timeline-item::before { animation: pulse-dot 2.4s ease-in-out infinite; }
+}
+
+@keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 var(--glow); }
+    70% { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+}
+
 /* Settings modal */
-.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: grid; place-items: center; }
+.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: grid; place-items: center; z-index: 9999; }
 .settings-overlay[hidden] { display: none !important; }
-.settings-panel { width: min(560px, 92vw); background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+.settings-panel { width: min(560px, 92vw); background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); z-index: 10000; }
 .settings-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .settings-content { padding: 14px 16px; display: grid; gap: 12px; }
 .setting-group { display: grid; gap: 6px; }
@@ -431,3 +504,52 @@ html[data-font-scale="120"] body { font-size: 120%; }
 
 /* Utility */
 .is-hidden { display: none !important; }
+
+/* Skills graph */
+.skills-graph { display: grid; gap: 12px; }
+
+.skill-details {
+    grid-column: 1 / -1;
+    height: 32px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 6px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* Skills view toggle chips spacing reuse existing .chip */
+.skills-original[hidden] { display: none !important; }
+
+@media print {
+    #skills-graph { display: none !important; }
+    #skills-original { display: block !important; }
+    #skills .section-controls { display: none !important; }
+}
+
+/* Tree */
+.skill-tree {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    background: var(--card);
+    overflow: hidden; /* allow canvas to run edge-to-edge inside the card */
+}
+
+.skill-tree svg { width: 100%; height: auto; display: block; }
+.skill-tree canvas { width: 100%; height: 840px; display: block; }
+@media (min-width: 900px) { .skill-tree canvas { height: 840px; } }
+.skill-tree .link { stroke: var(--border); stroke-width: 1; fill: none; }
+.skill-tree .node { cursor: default; }
+.skill-tree .node rect {
+    fill: var(--bg);
+    stroke: var(--border);
+    rx: 6;
+}
+.skill-tree .node text { fill: var(--text); font-size: 12px; dominant-baseline: middle; }
+.skill-tree .node.level-0 rect { fill: var(--accent); }
+.skill-tree .node.level-1 rect { fill: var(--accent); }
+.skill-tree .node:focus-visible rect { outline: 2px solid var(--primary); }

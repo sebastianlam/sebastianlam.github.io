@@ -41,19 +41,25 @@
         <aside class="sidebar">
             <header class="profile">
                 <h1>Jim Lam</h1>
-                <p>
-                    Email: <a href="mailto:jim.sebastian.lam@gmail.com">jim.sebastian.lam@gmail.com</a> |
-                    University: <a href="mailto:jl03093@surrey.ac.uk">jl03093@surrey.ac.uk</a>
-                </p>
-                <p>
-                    <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a> |
-                    <a href="https://github.com/sebastianlam">GitHub</a> |
-                    Phone: <a href="tel:+447754525567">+44&nbsp;7754&nbsp;525567</a>
-                </p>
+                <dl class="contact" aria-label="Contact details">
+                    <dt>Email</dt>
+                    <dd><a href="mailto:jim.sebastian.lam@gmail.com">jim.sebastian.lam@gmail.com</a></dd>
+                    <dt>University</dt>
+                    <dd><a href="mailto:jl03093@surrey.ac.uk">jl03093@surrey.ac.uk</a></dd>
+                    <dt>Links</dt>
+                    <dd>
+                        <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a>
+                        <span class="middot" aria-hidden="true">·</span>
+                        <a href="https://github.com/sebastianlam">GitHub</a>
+                    </dd>
+                    <dt>Phone</dt>
+                    <dd><a href="tel:+447754525567">+44&nbsp;7754&nbsp;525567</a></dd>
+                </dl>
                 <div class="quick-actions">
                     <button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">Toggle theme</button>
                     <button id="settings-open" type="button" aria-label="Open settings" title="Open settings">Settings</button>
                     <button id="read-aloud" type="button" aria-label="Read aloud" title="Read aloud">Read aloud</button>
+                    <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
                 </div>
             </header>
             <nav class="toc" aria-label="Sections">
@@ -66,26 +72,35 @@
             <div class="search-container" role="search">
                 <label for="site-search" class="visually-hidden">Search</label>
                 <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" aria-controls="search-results" aria-owns="search-results" aria-expanded="false" role="combobox" aria-autocomplete="list" aria-haspopup="listbox">
-                <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
                 <ul id="search-results" class="search-results" aria-live="polite" role="listbox"></ul>
             </div>
-            <div class="view-modes">
-                <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
-            </div>
+            <div id="search-help" class="sidebar-hint">Shortcuts: / search • Enter navigate • t theme • f focus • s settings</div>
         </aside>
         <main class="content" id="content" data-density="comfortable">
             <section id="skills" data-section="skills">
                 <h2>Skills</h2>
-                <p><strong>Technical Proficiencies:</strong></p>
-                <ul>
-                    <li><strong>Programming Languages:</strong> Python, Node.js, Java, LaTeX, Clojure(Script), SQL, HTML, CSS, PHP, Shell Scripting, Swift, Haskell, Prolog</li>
-                    <li><strong>Frameworks &amp; Libraries:</strong> Vue.js, Flutter, Three.js, SwiftUI, Express.js</li>
-                    <li><strong>Cloud Platforms:</strong> AWS (Route 53, S3, EC2), OCI (Compute Instance), Heroku</li>
-                    <li><strong>Version Control:</strong> Git</li>
-                    <li><strong>Design Tools:</strong> 3D Modeling (Blender, Rhino, SketchUp, AutoCAD) and 2D Design (Adobe InDesign, Illustrator)</li>
-                    <li><strong>Software Development:</strong> Project Coordination, Documentation, Test-Driven Development (TDD)</li>
-                </ul>
-                <p><strong>Languages:</strong> English (IELTS 8.5), Cantonese (Native), German (Intermediate), Mandarin (Fluent)</p>
+                <div class="section-controls">
+                    <div class="filter-chips" role="group" aria-label="View skills as">
+                        <button id="skills-view-graph" class="chip" type="button" aria-pressed="true">Graph</button>
+                        <button id="skills-view-list" class="chip" type="button" aria-pressed="false">List</button>
+                    </div>
+                </div>
+                <div id="skills-graph" class="skills-graph" aria-live="polite">
+                    <div class="skill-tree" aria-label="Skills tree"></div>
+                    <div id="skill-details" class="skill-details" aria-live="polite"></div>
+                </div>
+                <div id="skills-original" class="skills-original" hidden>
+                    <p><strong>Technical Proficiencies:</strong></p>
+                    <ul>
+                        <li><strong>Programming Languages:</strong> Python, Node.js, Java, LaTeX, Clojure, ClojureScript, SQL, HTML, CSS, PHP, Shell Scripting, Swift, Haskell, Prolog</li>
+                        <li><strong>Frameworks &amp; Libraries:</strong> Vue.js, Flutter, Three.js, SwiftUI, Express.js</li>
+                        <li><strong>Cloud Platforms:</strong> AWS (Route 53, S3, EC2), OCI (Compute Instance), Heroku</li>
+                        <li><strong>Version Control:</strong> Git</li>
+                        <li><strong>Design Tools:</strong> 3D Modeling (Blender, Rhino, SketchUp, AutoCAD), 2D Design (Adobe InDesign, Illustrator)</li>
+                        <li><strong>Software Development:</strong> Project Coordination, Documentation, Test-Driven Development (TDD)</li>
+                    </ul>
+                    <p><strong>Languages:</strong> English (IELTS 8.5), Cantonese (Native), German (Intermediate), Mandarin (Fluent)</p>
+                </div>
             </section>
 
             <section id="experience" data-section="experience">

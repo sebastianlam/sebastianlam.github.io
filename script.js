@@ -61,17 +61,29 @@ function applyTheme(theme) {
     } else if (theme === 'hc') {
         root.setAttribute('data-theme', 'hc');
     } else {
-        root.removeAttribute('data-theme');
+        // Explicitly mark light so the toggle can detect it reliably
+        root.setAttribute('data-theme', 'light');
     }
 }
 
 const savedTheme = localStorage.getItem('theme');
-if (savedTheme) {
+const savedThemeSelection = localStorage.getItem('themeSelection');
+if (savedTheme && (!savedThemeSelection && savedTheme === 'hc')) {
+    // Migration: previous default forced HC; switch to system preference
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const systemTheme = prefersDark ? 'dark' : 'light';
+    applyTheme(systemTheme);
+    localStorage.setItem('theme', systemTheme);
+    localStorage.setItem('themeSelection', 'auto');
+} else if (savedTheme) {
     applyTheme(savedTheme);
 } else {
-    // Default to High Contrast for maximum readability
-    applyTheme('hc');
-    localStorage.setItem('theme', 'hc');
+    // Default to system preference (auto)
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const systemTheme = prefersDark ? 'dark' : 'light';
+    applyTheme(systemTheme);
+    localStorage.setItem('theme', systemTheme);
+    localStorage.setItem('themeSelection', 'auto');
 }
 
 // Sync browser UI theme color meta with current theme
@@ -85,7 +97,7 @@ function syncThemeColorMeta() {
 syncThemeColorMeta();
 
 themeToggleButton?.addEventListener('click', () => {
-    const current = root.getAttribute('data-theme') || 'hc';
+    const current = root.getAttribute('data-theme') || localStorage.getItem('theme') || 'hc';
     let newTheme;
     if (current === 'hc') newTheme = 'light';
     else if (current === 'light') newTheme = 'dark';
@@ -249,7 +261,13 @@ document.addEventListener('keydown', (e) => {
         focusModeToggle?.click();
     } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
-        openSettings();
+        // Toggle settings - if open, close; if closed, open
+        const isSettingsOpen = !settingsOverlay?.hasAttribute('hidden');
+        if (isSettingsOpen) {
+            closeSettings();
+        } else {
+            openSettings();
+        }
     }
 });
 
@@ -490,3 +508,695 @@ readAloudBtn?.addEventListener('click', () => {
         celebrate();
     } catch {}
 });
+
+// ------- Skills Graphs / Tree -------
+function getSkillsSource() {
+    const container = document.getElementById('skills-original');
+    if (!container) return null;
+    const items = Array.from(container.querySelectorAll('ul > li'));
+    const categories = [];
+    items.forEach(li => {
+        const strong = li.querySelector('strong');
+        const categoryName = strong ? strong.textContent.replace(/:$/, '').trim() : 'Other';
+        let tail = li.textContent || '';
+        if (strong) tail = tail.replace(strong.textContent, '');
+        tail = tail.replace(/^\s*:\s*/, '');
+
+        function normalizeToken(s) {
+            let t = (s || '').replace(/[()]/g, ' ');
+            t = t.replace(/\band\b/gi, ' ');
+            t = t.replace(/\s+/g, ' ').trim();
+            t = t.replace(/[.;:,]$/g, '');
+            if (/^clojure\s*script$/i.test(t) || /^clojurescript$/i.test(t)) t = 'ClojureScript';
+            return t;
+        }
+
+        function shouldSkipInner(base, inner) {
+            const ib = inner.toLowerCase();
+            const bb = base.toLowerCase();
+            if (!inner) return true;
+            // Skip acronym duplicates like TDD, etc., when base is a phrase
+            if (inner.length <= 5 && /\b(development|design)\b/.test(bb)) return true;
+            // Skip 'Script' when base is Clojure
+            if (/^clojure$/i.test(base) && /^script$/i.test(inner)) return true;
+            return false;
+        }
+
+        const tokenSet = new Set();
+        // First, handle groups with parentheses "Base (a, b, c)"
+        const groupRegex = /([^,()]+?)\s*\(([^)]*)\)/g;
+        let match;
+        const consumed = [];
+        while ((match = groupRegex.exec(tail)) !== null) {
+            const baseRaw = normalizeToken(match[1]);
+            const innerRaw = match[2];
+            // Special-case Clojure(Script)
+            if (/^clojure$/i.test(baseRaw) && /script/i.test(innerRaw)) {
+                tokenSet.add('ClojureScript');
+            } else {
+                if (baseRaw) tokenSet.add(baseRaw);
+                innerRaw.split(',').map(normalizeToken).forEach(tok => {
+                    if (!tok) return;
+                    if (shouldSkipInner(baseRaw, tok)) return;
+                    tokenSet.add(tok);
+                });
+            }
+            consumed.push(match[0]);
+        }
+        // Remove consumed groups to avoid broken comma splits
+        let rest = tail;
+        consumed.forEach(seg => { rest = rest.replace(seg, ''); });
+        rest = rest.replace(/\([^)]*\)/g, ''); // any stragglers
+        rest = rest.replace(/\band\b/gi, ',');
+        rest.split(',').map(normalizeToken).forEach(tok => {
+            if (!tok) return;
+            // Avoid tokens that are just aliases already captured
+            if (/^tdd$/i.test(tok) && Array.from(tokenSet).some(t => /test-?driven\s+development/i.test(t))) return;
+            tokenSet.add(tok);
+        });
+
+        // Final clean pass and sort by label length then alpha for nicer layout
+        const unique = Array.from(tokenSet)
+            .map(t => t.replace(/\s+/g, ' ').trim())
+            .filter(Boolean);
+        unique.sort((a, b) => a.localeCompare(b));
+        categories.push({ name: categoryName, count: unique.length, items: unique });
+    });
+    // Languages line
+    const languagesP = Array.from(container.querySelectorAll('p')).find(p => /languages:/i.test(p.textContent || ''));
+    const languageEntries = [];
+    if (languagesP) {
+        const text = languagesP.textContent.replace(/^[^:]*:/, '').trim();
+        // Split by commas not inside parentheses
+        const parts = text.split(/,(?![^()]*\))/).map(s => s.trim()).filter(Boolean);
+        parts.forEach(part => {
+            const m = part.match(/^([^()]+?)(?:\s*\(([^)]+)\))?$/);
+            if (!m) return;
+            const name = m[1].trim();
+            const qualifier = (m[2] || '').trim();
+            languageEntries.push({ name, qualifier });
+        });
+    }
+    return { categories, languages: languageEntries };
+}
+
+function mapLanguageQualifierToLevel(q) {
+    if (!q) return 50;
+    const lower = q.toLowerCase();
+    if (/(native|mother\s*tongue)/i.test(lower)) return 100;
+    if (/fluent|c2\b/.test(lower)) return 92;
+    if (/advanced|c1\b/.test(lower)) return 85;
+    if (/upper\s*intermediate|b2\b/.test(lower)) return 72;
+    if (/intermediate|b1\b/.test(lower)) return 60;
+    if (/elementary|a2\b/.test(lower)) return 45;
+    const ielts = lower.match(/ielts\s*([0-9]+(?:\.[0-9])?)/);
+    if (ielts) {
+        const score = parseFloat(ielts[1]);
+        return Math.max(30, Math.min(100, Math.round((score / 9) * 100)));
+    }
+    return 65;
+}
+
+function createSvg(width, height, viewBox) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.setAttribute('viewBox', viewBox);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-hidden', 'false');
+    return svg;
+}
+
+function polarToCartesian(cx, cy, r, angle) {
+    const rad = (angle - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function buildTreeHierarchy() {
+    const source = getSkillsSource();
+    if (!source) return null;
+    const root = { name: 'Skills', children: [] };
+    // Technical categories
+    const tech = { name: 'Technical', children: [] };
+    source.categories.forEach(cat => {
+        tech.children.push({ name: cat.name, children: cat.items.map(it => ({ name: it })) });
+    });
+    // Languages
+    const lang = { name: 'Languages', children: source.languages.map(l => ({ name: l.name + (l.qualifier ? ` (${l.qualifier})` : '') })) };
+    root.children.push(tech);
+    root.children.push(lang);
+    return root;
+}
+
+function layoutTree(root, options) {
+    // Simple tidy tree layout (top-down), deterministic and compact
+    const nodeSizeY = (options && options.nodeHeight) || 28;
+    const nodeSizeX = (options && options.nodeWidth) || 120;
+    const nodes = [];
+    const links = [];
+
+    // Compute depth-first, assign preliminary x positions by traversal order per depth
+    const depthToLeaves = new Map();
+    function walk(node, depth, parent) {
+        const current = { node, depth, x: 0, y: depth * nodeSizeY, parent: null };
+        if (parent) current.parent = parent;
+        if (!node.children || node.children.length === 0) {
+            const idx = (depthToLeaves.get(depth) || 0);
+            depthToLeaves.set(depth, idx + 1);
+            current.x = idx * nodeSizeX;
+        } else {
+            const children = node.children.map(child => walk(child, depth + 1, current));
+            const minX = Math.min(...children.map(c => c.x));
+            const maxX = Math.max(...children.map(c => c.x));
+            current.x = (minX + maxX) / 2;
+        }
+        nodes.push(current);
+        if (current.parent) links.push({ source: current.parent, target: current });
+        return current;
+    }
+    const rootPlaced = walk(root, 0, null);
+    // Normalize X to start at padding
+    const minX = Math.min(...nodes.map(n => n.x));
+    const shift = (options && options.paddingX) || 16;
+    nodes.forEach(n => n.x = n.x - minX + shift);
+    return { nodes, links, root: rootPlaced };
+}
+
+function getCssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#999';
+}
+
+function renderForceTree(container) {
+    const data = buildTreeHierarchy();
+    if (!data) return;
+    const layout = layoutTree(data, { nodeWidth: 140, nodeHeight: 40, paddingX: 16 });
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+
+    const dpr = window.devicePixelRatio || 1;
+    function resize() {
+        const rect = container.getBoundingClientRect();
+        const cssWidth = rect.width || 600;
+        const baseHeight = Math.max(320, Math.min(520, (layout.root.depth + 6) * 60));
+        const cssHeight = baseHeight * 2; // make canvas twice as tall
+        canvas.style.width = cssWidth + 'px';
+        canvas.style.height = cssHeight + 'px';
+        canvas.width = Math.round(cssWidth * dpr);
+        canvas.height = Math.round(cssHeight * dpr);
+    }
+    resize();
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const baseFont = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+    ctx.font = baseFont;
+
+    function measureLabelWidth(label) {
+        const padding = 16; // 8 left + 8 right
+        // Ensure font is set before measuring
+        const prev = ctx.font;
+        ctx.font = baseFont;
+        const w = Math.ceil(ctx.measureText(label).width);
+        ctx.font = prev;
+        const minW = 80; const maxW = 220;
+        return Math.max(minW, Math.min(maxW, w + padding));
+    }
+
+    // Pin the root ("Skills") to a fixed world position
+    const rootFixed = { x: 140, y: 80 };
+
+    const nodes = layout.nodes.map(n => {
+        const isRoot = n.depth === 0;
+        const labelBase = String(n.node.name || '');
+        const label = (isRoot || n.depth === 1) ? labelBase.toUpperCase() : labelBase;
+        const width = isRoot ? Math.max(120, measureLabelWidth(label) + 12) : measureLabelWidth(label);
+        return {
+            ref: { ...n.node, name: label },
+            lref: n,
+            depth: n.depth,
+            isRoot,
+            x: isRoot ? rootFixed.x : (n.x + 60),
+            y: isRoot ? rootFixed.y : (n.y + 40),
+            vx: 0,
+            vy: 0,
+            fx: isRoot ? rootFixed.x : null,
+            fy: isRoot ? rootFixed.y : null,
+            width,
+            height: isRoot ? 32 : 28
+        };
+    });
+
+    // Start nodes extremely close together for an explosive unfold
+    nodes.forEach(n => {
+        if (!n.isRoot) {
+            n.x = rootFixed.x + (Math.random() - 0.5) * 2;
+            n.y = rootFixed.y + (Math.random() - 0.5) * 2;
+            n.vx = 0; n.vy = 0;
+        }
+    });
+    const links = layout.links.map(l => {
+        const s = nodes[layout.nodes.indexOf(l.source)];
+        const t = nodes[layout.nodes.indexOf(l.target)];
+        const base = 150; // larger base separation
+        const extra = l.source.depth === 0 ? 70 : l.source.depth * 20; // more space near root and gradually more by depth
+        return { source: s, target: t, rest: base + extra };
+    });
+
+    // Color mapping for Technical categories
+    const src = getSkillsSource();
+    const palette = ['#2e7bff', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#94a3b8'];
+    const languagesColor = '#a3e635'; // unique color for Languages group
+    const categoryColor = {};
+    (src?.categories || []).forEach((cat, i) => { categoryColor[cat.name] = palette[i % palette.length]; });
+
+    function colorForNode(layoutNode) {
+        // Assign colors:
+        // - Technical category families (depth 2 under Technical) use palette
+        // - Languages group and its children use a unique languagesColor
+        let p = layoutNode;
+        while (p && p.depth > 2) p = p.parent;
+        if (!p) return null;
+        if (p.depth === 2 && p.parent && p.parent.node && p.parent.node.name === 'Technical') {
+            return categoryColor[p.node.name] || null;
+        }
+        if ((p.depth === 1 && p.node && p.node.name === 'Languages') || (p.depth === 2 && p.parent && p.parent.node && p.parent.node.name === 'Languages')) {
+            return languagesColor;
+        }
+        return null;
+    }
+    nodes.forEach((n, idx) => { n.color = colorForNode(layout.nodes[idx]) || null; });
+
+    function roleFor(layoutNode) {
+        if (layoutNode.depth === 0) return 'root';
+        if (layoutNode.depth === 1) {
+            if (layoutNode.node && /technical/i.test(layoutNode.node.name)) return 'groupTechnical';
+            if (layoutNode.node && /languages/i.test(layoutNode.node.name)) return 'groupLanguages';
+        }
+        if (layoutNode.depth === 2) {
+            if (layoutNode.parent && layoutNode.parent.node && /technical/i.test(layoutNode.parent.node.name)) return 'familyTechnical';
+            if (layoutNode.parent && layoutNode.parent.node && /languages/i.test(layoutNode.parent.node.name)) return 'familyLanguages';
+        }
+        return 'leaf';
+    }
+    // assign roles and tweak dimensions
+    nodes.forEach((n, idx) => {
+        const role = roleFor(layout.nodes[idx]);
+        n.role = role;
+        if (role === 'groupTechnical' || role === 'groupLanguages') {
+            n.height = 30;
+            n.width = Math.max(n.width + 8, 140);
+        } else if (role === 'familyTechnical' || role === 'familyLanguages') {
+            n.height = 28;
+            n.width = Math.max(n.width, 120);
+        }
+    });
+
+    function hexToRgba(hex, alpha) {
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        if (!m) return `rgba(0,0,0,${alpha})`;
+        const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // Physics constants
+    const springK = 0.008; // slightly stiffer for faster response
+    const damping = 0.90;  // less damping → higher velocity
+    const charge = 1200;   // reduced repulsion strength
+    const centerK = 0.004; // gentler centering
+    const maxVelocity = 6.0; // allow faster movement
+    const groupRepel = { cross: 6.0, mixed: 2.4, same: 1.0 }; // stronger cross-category separation
+
+    // View transform with spring-like fit-to-bounds
+    const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
+    const viewSpringK = 0.006; // snappier view response
+    const viewDamping = 0.90;
+    function computeWorldBounds() {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of nodes) {
+            const left = n.x - n.width / 2;
+            const right = n.x + n.width / 2;
+            const top = n.y - n.height / 2;
+            const bottom = n.y + n.height / 2;
+            if (left < minX) minX = left;
+            if (right > maxX) maxX = right;
+            if (top < minY) minY = top;
+            if (bottom > maxY) maxY = bottom;
+        }
+        if (!isFinite(minX) || !isFinite(minY)) {
+            minX = 0; minY = 0; maxX = 100; maxY = 100;
+        }
+        return { minX, minY, maxX, maxY };
+    }
+
+    function step() {
+        const rect = container.getBoundingClientRect();
+        const W = rect.width;
+        const H = parseFloat(canvas.style.height);
+
+        // Reset accelerations
+        for (const a of nodes) { a.ax = 0; a.ay = 0; }
+
+        // Springs
+        for (const e of links) {
+            const dx = e.target.x - e.source.x;
+            const dy = e.target.y - e.source.y;
+            const dist = Math.max(1, Math.hypot(dx, dy));
+            const force = springK * (dist - e.rest);
+            const ux = dx / dist; const uy = dy / dist;
+            const fx = force * ux; const fy = force * uy;
+            e.source.ax += fx; e.source.ay += fy;
+            e.target.ax -= fx; e.target.ay -= fy;
+        }
+
+        // Repulsion (treat nodes as circles roughly by width)
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const a = nodes[i], b = nodes[j];
+                const dx = b.x - a.x; const dy = b.y - a.y;
+                const dist2 = Math.max(36, dx*dx + dy*dy);
+                const pairFactor = (a.color && b.color)
+                    ? (a.color !== b.color ? groupRepel.cross : groupRepel.same)
+                    : groupRepel.mixed;
+                const force = (charge * pairFactor) / dist2;
+                const dist = Math.sqrt(dist2);
+                const ux = dx / dist; const uy = dy / dist;
+                const fx = force * ux; const fy = force * uy;
+                a.ax -= fx; a.ay -= fy; b.ax += fx; b.ay += fy;
+            }
+        }
+
+        // Lightweight rectangle collision resolution to avoid label overlap
+        for (let i = 0; i < nodes.length; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+                const a = nodes[i], b = nodes[j];
+                const halfW = (a.width + b.width) / 2;
+                const halfH = (a.height + b.height) / 2;
+                const dx = b.x - a.x; const dy = b.y - a.y;
+                const ox = halfW - Math.abs(dx);
+                const oy = halfH - Math.abs(dy);
+                if (ox > 0 && oy > 0) {
+                    if (ox < oy) {
+                        const push = (dx < 0 ? -ox : ox) * 0.6;
+                        if (a.fx == null) a.x -= push / 2;
+                        if (b.fx == null) b.x += push / 2;
+                    } else {
+                        const push = (dy < 0 ? -oy : oy) * 0.6;
+                        if (a.fy == null) a.y -= push / 2;
+                        if (b.fy == null) b.y += push / 2;
+                    }
+                }
+            }
+        }
+
+        // Centering and bounds
+        const cx = W / 2; const cy = H / 2;
+        for (const n of nodes) {
+            n.ax += (cx - n.x) * centerK;
+            n.ay += (cy - n.y) * centerK;
+            if (n.isRoot) { n.fx = rootFixed.x; n.fy = rootFixed.y; }
+            if (n.fx != null) { n.x = n.fx; n.vx = 0; }
+            if (n.fy != null) { n.y = n.fy; n.vy = 0; }
+            n.vx = (n.vx + n.ax) * damping;
+            n.vy = (n.vy + n.ay) * damping;
+            // Clamp velocity to reduce oscillation
+            if (n.vx > maxVelocity) n.vx = maxVelocity; else if (n.vx < -maxVelocity) n.vx = -maxVelocity;
+            if (n.vy > maxVelocity) n.vy = maxVelocity; else if (n.vy < -maxVelocity) n.vy = -maxVelocity;
+            if (n.fx == null) n.x += n.vx;
+            if (n.fy == null) n.y += n.vy;
+        }
+
+        // View spring towards fit-to-bounds
+        const bounds = computeWorldBounds();
+        const margin = 40;
+        const worldW = Math.max(60, bounds.maxX - bounds.minX);
+        const worldH = Math.max(40, bounds.maxY - bounds.minY);
+        const scaleX = (W - margin * 2) / worldW;
+        const scaleY = (H - margin * 2) / worldH;
+        const targetScale = Math.max(0.6, Math.min(2.0, Math.min(scaleX, scaleY)));
+        const worldCx = (bounds.minX + bounds.maxX) / 2;
+        const worldCy = (bounds.minY + bounds.maxY) / 2;
+        const targetX = W / 2 - targetScale * worldCx;
+        const targetY = H / 2 - targetScale * worldCy;
+
+        view.vx = (view.vx + (targetX - view.x) * viewSpringK) * viewDamping;
+        view.vy = (view.vy + (targetY - view.y) * viewSpringK) * viewDamping;
+        view.vs = (view.vs + (targetScale - view.scale) * viewSpringK) * viewDamping;
+        view.x += view.vx; view.y += view.vy; view.scale += view.vs;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    // Offscreen buffer for edge blur compositing
+    const edgeBuffer = document.createElement('canvas');
+    const edgeCtx = edgeBuffer.getContext('2d');
+
+    function draw() {
+        const rect = container.getBoundingClientRect();
+        const W = rect.width; const H = parseFloat(canvas.style.height);
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(view.x, view.y);
+        ctx.scale(view.scale, view.scale);
+
+        const border = getCssVar('--border');
+        const text = getCssVar('--text');
+        const bg = getCssVar('--bg');
+        const primary = getCssVar('--primary');
+
+        // Links
+        ctx.strokeStyle = border;
+        ctx.lineWidth = Math.max(1, 1 / view.scale);
+        for (const e of links) {
+            // Connect from node centers
+            const x1 = e.source.x;
+            const y1 = e.source.y;
+            const x2 = e.target.x;
+            const y2 = e.target.y;
+            const dx = x2 - x1; const dy = y2 - y1;
+            const stretch = Math.min(1.8, Math.max(0.6, Math.hypot(dx, dy) / (e.rest || 150)));
+            const mx = (x1 + x2) / 2; const my = (y1 + y2) / 2;
+            const nx = -dy; const ny = dx;
+            const norm = Math.hypot(nx, ny) || 1;
+            const bend = (stretch - 1) * 12; // less perceived tension
+            const cx1 = mx + (nx / norm) * bend;
+            const cy1 = my + (ny / norm) * bend;
+            ctx.strokeStyle = e.target.color ? hexToRgba(e.target.color, 0.5) : border;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.quadraticCurveTo(cx1, cy1, x2, y2);
+            ctx.stroke();
+        }
+
+        // Nodes
+        ctx.font = baseFont;
+        for (const n of nodes) {
+            const x = n.x - n.width / 2;
+            const y = n.y - n.height / 2;
+            const accent = getCssVar('--accent');
+            const primary = getCssVar('--primary');
+            const isGroup = n.role === 'groupTechnical' || n.role === 'groupLanguages';
+            const isFamily = n.role === 'familyTechnical' || n.role === 'familyLanguages';
+            // Fancy fills
+            if (n.isRoot) {
+                ctx.fillStyle = accent;
+            } else if (isFamily && (n.color || n.role === 'familyLanguages')) {
+                const col = n.color || languagesColor;
+                const grad = ctx.createLinearGradient(x, y, x, y + n.height);
+                grad.addColorStop(0, hexToRgba(col, 0.14));
+                grad.addColorStop(1, hexToRgba(col, 0.06));
+                ctx.fillStyle = grad;
+            } else if (isGroup) {
+                ctx.fillStyle = hexToRgba(primary || '#000000', 0.06);
+            } else {
+                ctx.fillStyle = bg;
+            }
+            ctx.strokeStyle = n.isRoot ? primary : (n.color || (n.role === 'groupLanguages' ? languagesColor : border));
+            ctx.lineWidth = (n.isRoot ? 2 : isGroup ? 1.8 : 1.5) / view.scale;
+            if (n.isRoot || isGroup) {
+                ctx.shadowColor = hexToRgba(primary || '#000000', 0.25);
+                ctx.shadowBlur = 8;
+            }
+            roundRect(ctx, x, y, n.width, n.height, 8);
+            ctx.fill();
+            ctx.stroke();
+            if (n.isRoot || isGroup) { ctx.shadowBlur = 0; }
+            // Left color strip to reinforce grouping
+            if (n.color && !isFamily) {
+                ctx.fillStyle = hexToRgba(n.color, 0.15);
+                roundRect(ctx, x, y, Math.min(6, n.width), n.height, 8);
+                ctx.fill();
+            }
+            // Small colored dot for family nodes
+            if (isFamily) {
+                ctx.beginPath();
+                ctx.arc(x + 10, y + n.height / 2, 3.5, 0, Math.PI * 2);
+                ctx.fillStyle = n.color || languagesColor;
+                ctx.fill();
+            }
+            ctx.fillStyle = text;
+            if (n.isRoot || isGroup) {
+                const prev = ctx.font;
+                ctx.font = 'bold 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial';
+                ctx.fillText(n.ref.name, x + 10, y + n.height / 2 + 5);
+                ctx.font = prev;
+            } else {
+                const textOffset = isFamily ? 18 : 8; // room for dot
+                ctx.fillText(n.ref.name, x + textOffset, y + n.height / 2 + 4);
+            }
+        }
+
+        ctx.restore();
+
+        // --- Edge blur vignette ---
+        // Prepare offscreen copy of current frame and blur only the edges, then overlay
+        if (edgeBuffer.width !== canvas.width || edgeBuffer.height !== canvas.height) {
+            edgeBuffer.width = canvas.width;
+            edgeBuffer.height = canvas.height;
+        }
+        const w = canvas.width; const h = canvas.height;
+        const cxPix = w / 2, cyPix = h / 2;
+        const minDim = Math.min(w, h);
+        edgeCtx.setTransform(1,0,0,1,0,0);
+        edgeCtx.clearRect(0,0,w,h);
+        // Draw blurred frame into offscreen (very heavy blur)
+        edgeCtx.filter = 'blur(80px)';
+        edgeCtx.drawImage(canvas, 0, 0);
+        edgeCtx.filter = 'none';
+        // Mask so center is transparent and edges opaque (apply to offscreen only)
+        edgeCtx.globalCompositeOperation = 'destination-in';
+        const r0 = minDim * 0.28; // start fade closer to center for stronger effect
+        const r1 = minDim * 1.00; // push blur to very edge
+        const g = edgeCtx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
+        g.addColorStop(0.0, 'rgba(0,0,0,0)');
+        g.addColorStop(0.45, 'rgba(0,0,0,1)');
+        g.addColorStop(1.0, 'rgba(0,0,0,1)');
+        edgeCtx.fillStyle = g;
+        edgeCtx.fillRect(0, 0, w, h);
+        edgeCtx.globalCompositeOperation = 'source-over';
+        // First, erase the crisp edges from the main canvas using the same mask
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        const gErase = ctx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
+        gErase.addColorStop(0.0, 'rgba(0,0,0,0)');
+        gErase.addColorStop(0.55, 'rgba(0,0,0,1)');
+        gErase.addColorStop(1.0, 'rgba(0,0,0,1)');
+        ctx.fillStyle = gErase;
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+        // Overlay the blurred edges on the main canvas, leaving the crisp center intact
+        ctx.drawImage(edgeBuffer, 0, 0);
+        // Draw a second time with partial alpha to intensify
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+        ctx.drawImage(edgeBuffer, 0, 0);
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+        // Third pass for a very heavy vignette
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(edgeBuffer, 0, 0);
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+    }
+
+    // Interaction
+    let dragging = null;
+    function getPointer(evt) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (evt.clientX - rect.left);
+        const y = (evt.clientY - rect.top);
+        return { x, y };
+    }
+    function toWorld(p) { return { x: (p.x - view.x) / view.scale, y: (p.y - view.y) / view.scale }; }
+    function hit(x, y) {
+        for (let i = nodes.length - 1; i >= 0; i--) {
+            const n = nodes[i];
+            const left = n.x - n.width / 2;
+            const top = n.y - n.height / 2;
+            if (x >= left && x <= left + n.width && y >= top && y <= top + n.height) return n;
+        }
+        return null;
+    }
+    canvas.addEventListener('pointerdown', (e) => {
+        const p = toWorld(getPointer(e));
+        const n = hit(p.x, p.y);
+        if (n) {
+            if (n.isRoot) return; // root is pinned, do not drag
+            dragging = n;
+            n.fx = p.x; n.fy = p.y;
+            canvas.setPointerCapture(e.pointerId);
+            showSkillDetails(n.ref.name);
+        }
+    });
+    canvas.addEventListener('pointermove', (e) => {
+        const p = toWorld(getPointer(e));
+        if (dragging) {
+            dragging.fx = p.x; dragging.fy = p.y;
+        } else {
+            const n = hit(p.x, p.y);
+            showSkillDetails(n ? n.ref.name : '');
+        }
+    });
+    canvas.addEventListener('pointerup', (e) => {
+        if (dragging) {
+            dragging.fx = null; dragging.fy = null;
+            dragging = null;
+            canvas.releasePointerCapture(e.pointerId);
+            showSkillDetails('');
+        }
+    });
+    window.addEventListener('resize', () => { resize(); });
+
+    function tick() { step(); draw(); requestAnimationFrame(tick); }
+    tick();
+}
+
+function showSkillDetails(text) {
+    const el = document.getElementById('skill-details');
+    if (!el) return;
+    el.textContent = text || '';
+}
+
+function initSkillsGraphs() {
+    const rootSection = document.getElementById('skills');
+    const orig = document.getElementById('skills-original');
+    const graph = document.getElementById('skills-graph');
+    const btnGraph = document.getElementById('skills-view-graph');
+    const btnList = document.getElementById('skills-view-list');
+    if (!rootSection || !orig || !graph || !btnGraph || !btnList) return;
+
+    // Toggle behavior
+    function setView(mode) {
+        const isGraph = mode === 'graph';
+        graph.hidden = !isGraph;
+        orig.hidden = isGraph;
+        btnGraph.setAttribute('aria-pressed', String(isGraph));
+        btnList.setAttribute('aria-pressed', String(!isGraph));
+    }
+    btnGraph.addEventListener('click', () => setView('graph'));
+    btnList.addEventListener('click', () => setView('list'));
+
+    // Render tree
+    try {
+        const treeContainer = graph.querySelector('.skill-tree');
+        if (treeContainer) renderForceTree(treeContainer);
+        setView('graph');
+    } catch {}
+}
+
+// Defer to next frame to ensure DOM is ready
+requestAnimationFrame(initSkillsGraphs);
