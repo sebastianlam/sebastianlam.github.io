@@ -41,10 +41,6 @@
         <aside class="sidebar">
             <header class="profile">
                 <h1>Jim Lam</h1>
-                <div class="avatar kids-only" aria-hidden="true">
-                    <img src="/icons/source.png" alt="Cartoon avatar of Jim" loading="lazy">
-                </div>
-                <p class="kids-only">Hi! I’m Jim. I like making cool computer things. Tap the buttons to explore! 🎉</p>
                 <p>
                     Email: <a href="mailto:jim.sebastian.lam@gmail.com">jim.sebastian.lam@gmail.com</a> |
                     University: <a href="mailto:jl03093@surrey.ac.uk">jl03093@surrey.ac.uk</a>
@@ -75,7 +71,6 @@
             </div>
             <div class="view-modes">
                 <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
-                <button id="kids-mode-toggle" type="button" aria-pressed="false" title="Toggle kids mode">Kids mode</button>
             </div>
         </aside>
         <main class="content" id="content" data-density="comfortable">
@@ -99,6 +94,14 @@
                     <div class="filter-chips" id="experience-filters" role="group" aria-label="Filter experience by tag"></div>
                 </div>
                 <div id="experience-timeline" class="timeline"></div>
+                <article class="experience-item" data-tags="space; satellite; telemetry; tracking; command; leadership; ukSeds; award; innovation">
+                    <h3>Peryton Space Society -- TT&amp;C Team Lead <span class="right">September 2024 -- July 2025</span></h3>
+                    <ul>
+                        <li>Led the Telemetry, Tracking, and Command workstream for the UKSEDS satellite design competition entry.</li>
+                        <li>Optimised communications configuration for link resilience (antenna selection, error correction, compression) and built ground station tooling (telemetry dashboard and command interface).</li>
+                        <li>Won the Best Innovation Award at the Airbus Defence and Space Stevenage site.</li>
+                    </ul>
+                </article>
                 <article class="experience-item" data-tags="university; mentoring; mathematics; probability; automata">
                     <h3>University of Surrey -- LAB Pal for COM1026 &amp; Buddy Scheme Mentor <span class="right">Present</span></h3>
                     <p>Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achievement learning environment.</p>
@@ -171,11 +174,6 @@
                     <h3>University of Surrey <span class="right">September 2023 -- August 2027, Guildford</span></h3>
                     <p>BSc (Hons.) in Computer Science with PTY</p>
                     <p>Year one aggregate: 86.13%</p>
-                    <p>TT&amp;C (Telemetry, Tracking, and Command) team lead for the <strong>Peryton Space Society</strong> UKSEDS satellite design competition entry.</p>
-                    <ul>
-                        <li><strong>Hardware:</strong> Optimised the comms configuration of the satellite to maximise connection resilience by various means (e.g. antenna selection, error correction, and compression).</li>
-                        <li><strong>Software:</strong> Developed ground station software to interface with the satellite, including a telemetry dashboard and a command interface.</li>
-                    </ul>
                     <p>Active member of the <strong>University of Surrey Mountaineering Club</strong>.</p>
                 </article>
                 <article class="education-item" data-tags="architecture; university; sydney; design">
@@ -194,6 +192,7 @@
             </section>
         </main>
     </div>
+    <button id="focus-exit" type="button" class="focus-exit" aria-label="Exit focus mode">Exit focus</button>
     <div id="settings-overlay" class="settings-overlay" hidden>
         <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="settings-header">

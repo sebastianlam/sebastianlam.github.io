@@ -69,8 +69,9 @@ const savedTheme = localStorage.getItem('theme');
 if (savedTheme) {
     applyTheme(savedTheme);
 } else {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    applyTheme(prefersDark ? 'dark' : 'light');
+    // Default to High Contrast for maximum readability
+    applyTheme('hc');
+    localStorage.setItem('theme', 'hc');
 }
 
 // Sync browser UI theme color meta with current theme
@@ -84,8 +85,11 @@ function syncThemeColorMeta() {
 syncThemeColorMeta();
 
 themeToggleButton?.addEventListener('click', () => {
-    const current = root.getAttribute('data-theme');
-    const newTheme = current === 'dark' ? 'light' : (current === 'hc' ? 'light' : 'dark');
+    const current = root.getAttribute('data-theme') || 'hc';
+    let newTheme;
+    if (current === 'hc') newTheme = 'light';
+    else if (current === 'light') newTheme = 'dark';
+    else newTheme = 'hc';
     applyTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     syncThemeColorMeta();
@@ -207,8 +211,9 @@ fontScale?.addEventListener('input', () => {
     localStorage.setItem('fontScale', String(val));
 });
 
-// Focus mode
+// mode
 const focusModeToggle = document.getElementById('focus-mode-toggle');
+const focusExitButton = document.getElementById('focus-exit');
 function setFocusMode(enabled) {
     document.body.classList.toggle('focus-mode', enabled);
     localStorage.setItem('focusMode', enabled ? '1' : '0');
@@ -222,6 +227,12 @@ focusModeToggle?.addEventListener('click', () => {
     const enabled = !document.body.classList.contains('focus-mode');
     setFocusMode(enabled);
     focusModeToggle.setAttribute('aria-pressed', String(enabled));
+});
+
+// Visible exit in focus mode
+focusExitButton?.addEventListener('click', () => {
+    setFocusMode(false);
+    if (focusModeToggle) focusModeToggle.setAttribute('aria-pressed', 'false');
 });
 
 // Keyboard shortcuts
@@ -239,9 +250,6 @@ document.addEventListener('keydown', (e) => {
     } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
         openSettings();
-    } else if (e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        document.getElementById('kids-mode-toggle')?.click();
     }
 });
 
@@ -425,11 +433,13 @@ function parseDateRange(text) {
 function buildTimeline() {
     const list = [];
     document.querySelectorAll('#experience .experience-item').forEach(item => {
-        const title = item.querySelector('h3')?.textContent || '';
-        const dateText = (title.match(/\b(.*\d{4}.*)$/) || [])[1] || (item.querySelector('.right')?.textContent || '');
+        const h3 = item.querySelector('h3');
+        const rawTitle = h3?.textContent || '';
+        const dateText = h3?.querySelector('.right')?.textContent || item.querySelector('.right')?.textContent || '';
+        const cleanTitle = dateText ? rawTitle.replace(dateText, '').trim().replace(/[\-–—]\s*$/, '').trim() : rawTitle.trim();
         const dates = parseDateRange(dateText);
         if (!dates.start) return;
-        list.push({ title: title.replace(/\s+<span[\s\S]*$/,''), start: dates.start, end: dates.end, present: dates.present });
+        list.push({ title: cleanTitle, start: dates.start, end: dates.end, present: dates.present });
     });
     list.sort((a,b) => b.start - a.start);
     const container = document.getElementById('experience-timeline');
@@ -449,96 +459,19 @@ buildTimeline();
 
 // Register Service Worker for PWA/offline
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
-    });
-}
-
-// Kids mode: simpler headings, emoji, collapsible summaries, confetti, sounds, read-aloud
-const kidsToggle = document.getElementById('kids-mode-toggle');
-const readAloudBtn = document.getElementById('read-aloud');
-
-function setKidsMode(enabled) {
-    document.body.classList.toggle('kids-mode', enabled);
-    localStorage.setItem('kidsMode', enabled ? '1' : '0');
-    if (enabled) {
-        applyKidsLabels();
-        ensureSummaries();
-        celebrate();
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+        // Avoid SW cache during local dev for accurate iteration
+        navigator.serviceWorker.getRegistrations?.().then(regs => regs.forEach(reg => reg.unregister())).catch(() => {});
     } else {
-        restoreLabels();
-        removeSummaries();
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
     }
 }
 
-function applyKidsLabels() {
-    const map = new Map([
-        ['#skills h2', '🧰 What I Can Do'],
-        ['#experience h2', '🧩 Things I Did'],
-        ['#personal-projects h2', '🛠️ Cool Things I Made'],
-        ['#education h2', '🎓 School'],
-        ['#interests h2', '🎉 Things I Like'],
-    ]);
-    map.forEach((label, sel) => {
-        const el = document.querySelector(sel);
-        if (!el) return;
-        if (!el.getAttribute('data-orig')) el.setAttribute('data-orig', el.textContent || '');
-        el.textContent = label;
-    });
-}
-
-function restoreLabels() {
-    document.querySelectorAll('main section h2[data-orig]').forEach(h => {
-        h.textContent = h.getAttribute('data-orig') || h.textContent;
-    });
-}
-
-function ensureSummaries() {
-    document.querySelectorAll('main section').forEach(section => {
-        if (section.querySelector('.kids-summary')) return;
-        const para = Array.from(section.querySelectorAll('p, ul'))[0];
-        if (!para) return;
-        const wrapper = document.createElement('div');
-        wrapper.className = 'kids-summary';
-        const details = document.createElement('details');
-        const summary = document.createElement('summary');
-        summary.textContent = 'More';
-        details.appendChild(summary);
-        while (para.nextSibling) {
-            details.appendChild(para.nextSibling);
-        }
-        wrapper.appendChild(details);
-        para.after(wrapper);
-    });
-}
-
-function removeSummaries() {
-    document.querySelectorAll('.kids-summary').forEach(el => {
-        const details = el.querySelector('details');
-        if (details) {
-            // move children back before removing
-            while (details.firstChild) {
-                el.parentNode.insertBefore(details.firstChild, el);
-            }
-        }
-        el.remove();
-    });
-}
-
-function celebrate() { /* intentionally no-op for disciplined UI */ }
-
-// Persist and initialize
-const savedKids = localStorage.getItem('kidsMode') === '1';
-setKidsMode(savedKids);
-if (kidsToggle) kidsToggle.setAttribute('aria-pressed', String(savedKids));
-
-kidsToggle?.addEventListener('click', () => {
-    const enabled = !(document.body.classList.contains('kids-mode'));
-    setKidsMode(enabled);
-    kidsToggle.setAttribute('aria-pressed', String(enabled));
-});
-
 // Read aloud using Speech Synthesis API
+const readAloudBtn = document.getElementById('read-aloud');
 function getReadableText() {
     const active = document.elementFromPoint(window.innerWidth / 2, 120);
     const section = active ? active.closest('section') : document.querySelector('main section');
