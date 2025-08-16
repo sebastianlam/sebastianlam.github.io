@@ -4,10 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jim Lam — CV</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="description" content="Jim Lam — Computer Science student and software engineer. CV, skills, projects, and experience.">
+    <link rel="canonical" href="https://sebastianlam.github.io/">
+    <meta property="og:title" content="Jim Lam — CV">
+    <meta property="og:description" content="Skills, experience, and projects.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://sebastianlam.github.io/">
+    <meta property="og:image" content="https://sebastianlam.github.io/og-image.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'">
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Jim Lam",
+      "url": "https://sebastianlam.github.io/",
+      "email": "mailto:jim.sebastian.lam@gmail.com",
+      "sameAs": [
+        "https://github.com/sebastianlam",
+        "https://www.linkedin.com/in/jim-l-3154a0102/"
+      ],
+      "jobTitle": "Software Engineer",
+      "alumniOf": "University of Surrey"
+    }
+    </script>
 </head>
 <body>
-    <div class="layout">
+    <a class="visually-hidden" href="#content">Skip to main content</a>
+    <div class="layout" id="app-root">
         <aside class="sidebar">
             <header class="profile">
                 <h1>Jim Lam</h1>
@@ -18,9 +46,12 @@
                 <p>
                     <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a> |
                     <a href="https://github.com/sebastianlam">GitHub</a> |
-                    Phone: +44 7754 525567
+                    Phone: <a href="tel:+447754525567">+44 7754 525567</a>
                 </p>
-                <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">Toggle theme</button>
+                <div class="quick-actions">
+                    <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">Toggle theme</button>
+                    <button id="settings-open" aria-label="Open settings" title="Open settings">Settings</button>
+                </div>
             </header>
             <nav class="toc" aria-label="Sections">
                 <a href="#skills">Skills</a>
@@ -29,9 +60,18 @@
                 <a href="#education">Education</a>
                 <a href="#interests">Interests</a>
             </nav>
+            <div class="search-container" role="search">
+                <label for="site-search" class="visually-hidden">Search</label>
+                <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
+                <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
+                <div id="search-results" class="search-results" role="listbox" aria-live="polite" aria-label="Search results"></div>
+            </div>
+            <div class="view-modes">
+                <button id="focus-mode-toggle" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
+            </div>
         </aside>
-        <main class="content">
-            <section id="skills">
+        <main class="content" id="content" data-density="comfortable">
+            <section id="skills" data-section="skills">
                 <h2>Skills</h2>
                 <p><strong>Technical Proficiencies:</strong></p>
                 <ul>
@@ -45,21 +85,25 @@
                 <p><strong>Languages:</strong> English (IELTS 8.5), Cantonese (Native), German (Intermediate), Mandarin (Fluent)</p>
             </section>
 
-            <section id="experience">
+            <section id="experience" data-section="experience">
                 <h2>Experience</h2>
-                <article class="experience-item">
+                <div class="section-controls">
+                    <div class="filter-chips" id="experience-filters" aria-label="Filter experience by tag"></div>
+                </div>
+                <div id="experience-timeline" class="timeline" aria-label="Experience timeline"></div>
+                <article class="experience-item" data-tags="university; mentoring; mathematics; probability; automata">
                     <h3>University of Surrey -- LAB Pal for COM1026 & Buddy Scheme Mentor <span class="right">Present</span></h3>
                     <p>Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achievement learning environment.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="computer-vision; yolo; python; pyside; blender; synthetic-data; backend">
                     <h3>Sports Vision -- Computer Vision Lead <span class="right">Present</span></h3>
                     <p>Architected and spearheaded the development of a computer vision backend for a visual snooker scoring system using YOLO. Designed and implemented a custom image annotation tool with PySide-6 and currently driving synthetic data generation via the Blender Python API to enhance system accuracy.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="teaching; english; stem; tutoring">
                     <h3>English Tutor <span class="right">Q2 2021 -- Present</span></h3>
                     <p>Deliver tailored, advanced-level English tutoring with a focus on STEM terminology, significantly improving students' technical vocabulary and domain knowledge.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="fintech; aws; php; clojure; vue; mysql; s3; apache; ec2; flutter; ios">
                     <h3>Next Token Solutions -- Software Engineer <span class="right">October 2020 -- December 2022</span></h3>
                     <ul>
                         <li>Supported web development for Finmonster, a fintech platform designed for local SME loan matching.</li>
@@ -75,69 +119,103 @@
                         <li>Drove mobile app development by writing an internal Product Handbook App demo in both Flutter and iOS native, and rewriting legacy Next Token React Native apps with Flutter.</li>
                     </ul>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="ecommerce; php; client; translation; marketing">
                     <h3>Tommax -- Part-Time Developer <span class="right">June 2020 -- October 2020</span></h3>
                     <p>Collaborated directly with clients on e-commerce solutions and PHP web development projects. Enhanced company communications by providing strategic translation services and producing region-specific subtitling for marketing campaigns.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="architecture; competition; parametric-design; pavilion">
                     <h3>Barangaroo Promenade Pavilion Design Competition -- Team Member <span class="right">Summer 2020</span></h3>
-                    <p>Jointly Put Forward A Pavilion Design Competition Entry With A Holistic Approach To Create A Functional Public Shelter, Through A Supersized Parametric Take Of The Aboriginal Coolamon.</p>
+                    <p>Jointly put forward a pavilion design competition entry with a holistic approach to create a functional public shelter, through a supersized parametric take of the Aboriginal coolamon.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="audio; events; live; installation">
                     <h3>“Innonation” Live Music Company -- Audio Assistant <span class="right">December 2018</span></h3>
-                    <p>Managed live audio equipment installations for high-profile events, including weddings, concerts, and corporate functions across Hong Kong, ensuring reliable operational performance under demading time and physical constraints.</p>
+                    <p>Managed live audio equipment installations for high-profile events, including weddings, concerts, and corporate functions across Hong Kong, ensuring reliable operational performance under demanding time and physical constraints.</p>
                 </article>
-                <article class="experience-item">
+                <article class="experience-item" data-tags="entrepreneurship; competition; startup; pitch">
                     <h3>HKU Decacorn Entrepreneurial Camp Case Competition -- Finalist <span class="right">June 2018</span></h3>
-                    <p>Conceived and pitched a comprehensive startup proposal for an intergrated knowledge and graduate headhunting platform within 24 hours, grounded on strategic insight form business students and industry advisors from the University of Hong Kong.</p>
+                    <p>Conceived and pitched a comprehensive startup proposal for an integrated knowledge and graduate headhunting platform within 24 hours, grounded on strategic insight from business students and industry advisors from the University of Hong Kong.</p>
                 </article>
             </section>
 
-            <section id="personal-projects">
+            <section id="personal-projects" data-section="projects">
                 <h2>Personal Projects</h2>
-                <article class="project-item">
+                <div class="section-controls">
+                    <div class="filter-chips" id="project-filters" aria-label="Filter projects by tag"></div>
+                </div>
+                <article class="project-item" data-tags="dashboard; data-visualization; python; forecasting; anomaly-detection; treemap">
                     <h3>Lidl Spending Dashboard <span class="right">Ongoing</span></h3>
                     <p>Interactive personal finance dashboard covering 25 months of supermarket receipts with category treemaps, monthly spend trends, anomaly detection, short-term forecasts, stacked category breakdowns, heatmaps, Pareto views, and a receipts timeline.</p>
                     <p><a href="http://193.123.178.35/dashboard" target="_blank" rel="noopener">View live dashboard</a></p>
                 </article>
-                <article class="project-item">
+                <article class="project-item" data-tags="clojurescript; plugin; logseq; tailwindcss; rum">
                     <h3>URL+ <span class="right">Present</span></h3>
                     <p>Key contributor to the only ClojureScript plugin for Logseq, an innovative open-source note-taking platform. Developed features to retrieve and organize URL responses and deliver dictionary-style definitions, leveraging Rum and TailwindCSS for a dynamic user experience.</p>
                 </article>
-                <article class="project-item">
+                <article class="project-item" data-tags="cli; accessibility; voice; llm; tts; stt">
                     <h3>DrunkGPT <span class="right">Present</span></h3>
                     <p>Developed an accessibility-centric, command-line LLM client featuring a pioneering voice interface, significantly enhancing user interaction and accessibility.</p>
                 </article>
             </section>
 
-            <section id="education">
+            <section id="education" data-section="education">
                 <h2>Education</h2>
-                <article class="education-item">
+                <article class="education-item" data-tags="university; satellite; telemetry; tracking; command; leadership; space">
                     <h3>University of Surrey <span class="right">September 2023 -- August 2027, Guildford</span></h3>
                     <p>BSc (Hons.) in Computer Science with PTY</p>
                     <p>Year one aggregate: 86.13%</p>
-                    <p>TT&amp;C (Telemetry, tracking, and Command) team lead for the <strong>Peryton Space Society</strong> UKSEDS satellite design competition entry.</p>
+                    <p>TT&amp;C (Telemetry, Tracking, and Command) team lead for the <strong>Peryton Space Society</strong> UKSEDS satellite design competition entry.</p>
                     <ul>
                         <li><strong>Hardware:</strong> Optimised the comms configuration of the satellite to maximise connection resilience by various means (e.g. antenna selection, error correction, and compression).</li>
                         <li><strong>Software:</strong> Developed ground station software to interface with the satellite, including a telemetry dashboard and a command interface.</li>
                     </ul>
                     <p>Active member of the <strong>University of Surrey Mountaineering Club</strong>.</p>
                 </article>
-                <article class="education-item">
+                <article class="education-item" data-tags="architecture; university; sydney; design">
                     <h3>University of Sydney <span class="right">January 2019 -- August 2020, Sydney</span></h3>
                     <p>Bachelor of Design in Architecture (Hons.)</p>
                 </article>
-                <article class="education-item">
+                <article class="education-item" data-tags="secondary; hong-kong; science; physics; chemistry; biology">
                     <h3>Diocesan Boys’ School <span class="right">September 2014 -- August 2018, Hong Kong</span></h3>
                     <p>Academic Electives: Physics, Chemistry, Biology</p>
                 </article>
             </section>
 
-            <section id="interests">
+            <section id="interests" data-section="interests">
                 <h2>Interests</h2>
                 <p>Bouldering/Climbing (V7/7A+), Debating, Piano Improv, Flight Simulation (X-Plane 12)</p>
             </section>
         </main>
+    </div>
+    <div id="settings-overlay" class="settings-overlay" hidden>
+        <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div class="settings-header">
+                <h3 id="settings-title">Settings</h3>
+                <button id="settings-close" aria-label="Close settings" title="Close">✕</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-group">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select">
+                        <option value="auto">Auto</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="hc">High contrast</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="density-select">Density</label>
+                    <select id="density-select">
+                        <option value="comfortable">Comfortable</option>
+                        <option value="compact">Compact</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label for="font-scale">Font size</label>
+                    <input id="font-scale" type="range" min="90" max="120" step="2" value="100">
+                </div>
+                <p class="settings-hint">Shortcuts: / search, t theme, f focus mode, s settings</p>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

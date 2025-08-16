@@ -1,0 +1,22 @@
+name: Site audits
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm i -g serve @lhci/cli @axe-core/cli html-validate linkinator
+      - run: nohup serve -s . -l 4173 >/dev/null 2>&1 &
+      - run: lhci collect --url=http://localhost:4173 --numberOfRuns=3 --config=lighthouserc.json
+      - run: lhci assert --config=lighthouserc.json || true
+      - run: axe http://localhost:4173 --quiet --exit
+      - run: html-validate .
+      - run: linkinator http://localhost:4173 --recurse --silent
+
