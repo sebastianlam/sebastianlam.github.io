@@ -81,14 +81,19 @@ a:hover {
         gap: 16px;
         padding: 16px;
     }
+    .sidebar {
+        position: static;
+        border: 0;
+        padding: 0;
+    }
 }
 
 .sidebar {
     position: sticky;
     top: 32px;
     align-self: start;
-    border-left: 1px solid var(--border);
-    padding-left: 20px;
+    border-right: 1px solid var(--border);
+    padding-right: 20px;
 }
 
 .quick-actions {
@@ -191,10 +196,14 @@ h3 {
     margin: 10px 0 6px 0;
     font-weight: 600;
     letter-spacing: -0.01em;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
 }
 
 .right {
-    float: right;
+    float: none;
     font-weight: normal;
     color: var(--muted);
 }
@@ -237,6 +246,11 @@ strong {
 .reveal.is-visible {
     opacity: 1;
     transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(4px); transition: opacity 200ms ease, transform 200ms ease; }
+    .reveal.is-visible { opacity: 1; transform: none; }
 }
 
 /* Focus visibility for keyboard navigation */
@@ -368,3 +382,21 @@ body.focus-mode .layout { grid-template-columns: 1fr; max-width: 860px; }
 [data-density="compact"] section { margin-bottom: 40px; }
 [data-density="compact"] h3 { margin: 6px 0 4px 0; }
 [data-density="compact"] ul { margin: 6px 0 6px 0; }
+
+/* Font scale via attribute (CSP-safe) */
+html[data-font-scale="90"] body { font-size: 90%; }
+html[data-font-scale="92"] body { font-size: 92%; }
+html[data-font-scale="94"] body { font-size: 94%; }
+html[data-font-scale="96"] body { font-size: 96%; }
+html[data-font-scale="98"] body { font-size: 98%; }
+html[data-font-scale="100"] body { font-size: 100%; }
+html[data-font-scale="102"] body { font-size: 102%; }
+html[data-font-scale="104"] body { font-size: 104%; }
+html[data-font-scale="106"] body { font-size: 106%; }
+html[data-font-scale="108"] body { font-size: 108%; }
+html[data-font-scale="110"] body { font-size: 110%; }
+html[data-font-scale="112"] body { font-size: 112%; }
+html[data-font-scale="114"] body { font-size: 114%; }
+html[data-font-scale="116"] body { font-size: 116%; }
+html[data-font-scale="118"] body { font-size: 118%; }
+html[data-font-scale="120"] body { font-size: 120%; }

@@ -73,11 +73,22 @@ if (savedTheme) {
     applyTheme(prefersDark ? 'dark' : 'light');
 }
 
+// Sync browser UI theme color meta with current theme
+function syncThemeColorMeta() {
+    const meta = document.getElementById('meta-theme-color');
+    if (!meta) return;
+    const current = root.getAttribute('data-theme');
+    const color = current === 'dark' || current === 'hc' ? '#0b0b0b' : '#ffffff';
+    meta.setAttribute('content', color);
+}
+syncThemeColorMeta();
+
 themeToggleButton?.addEventListener('click', () => {
     const current = root.getAttribute('data-theme');
     const newTheme = current === 'dark' ? 'light' : (current === 'hc' ? 'light' : 'dark');
     applyTheme(newTheme);
     localStorage.setItem('theme', newTheme);
+    syncThemeColorMeta();
 });
 
 // Settings modal, density, font scaling, explicit theme
@@ -95,7 +106,8 @@ function applyDensity(density) {
 }
 
 function applyFontScale(scalePercent) {
-    document.body.style.fontSize = `${scalePercent}%`;
+    // Use attribute to satisfy CSP without inline styles
+    document.documentElement.setAttribute('data-font-scale', String(scalePercent));
 }
 
 function openSettings() {
@@ -103,6 +115,8 @@ function openSettings() {
     settingsOverlay?.addEventListener('click', onOverlayClick);
     document.addEventListener('keydown', onSettingsKeydown);
     previouslyFocusedElement = document.activeElement;
+    // Inert background while dialog is open
+    document.getElementById('app-root')?.setAttribute('inert', '');
     // Focus trap inside settings panel
     const panel = settingsOverlay?.querySelector('.settings-panel');
     const focusable = panel ? Array.from(panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')) : [];
@@ -143,6 +157,7 @@ function closeSettings() {
     if (previouslyFocusedElement && previouslyFocusedElement.focus) {
         previouslyFocusedElement.focus();
     }
+    document.getElementById('app-root')?.removeAttribute('inert');
 }
 
 function onOverlayClick(e) {
@@ -177,6 +192,7 @@ themeSelect?.addEventListener('change', () => {
         localStorage.setItem('theme', val);
     }
     localStorage.setItem('themeSelection', val);
+    syncThemeColorMeta();
 });
 
 densitySelect?.addEventListener('change', () => {
@@ -279,6 +295,7 @@ function renderResults(results) {
         el.className = 'search-result';
         el.id = `search-option-${idx}`;
         el.setAttribute('data-target', res.type === 'section' ? `#${res.id}` : `#${res.section}`);
+        el.setAttribute('role', 'option');
         el.textContent = res.title || res.text?.slice(0, 80) || 'Untitled';
         if (idx === 0) el.setAttribute('aria-selected', 'true');
         el.addEventListener('click', () => {

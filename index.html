@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Jim Lam — CV</title>
-    <meta name="theme-color" content="#0a0a0a">
+    <meta name="theme-color" content="#0a0a0a" id="meta-theme-color">
     <meta name="description" content="Jim Lam — Computer Science student and software engineer. CV, skills, projects, and experience.">
     <link rel="canonical" href="https://sebastianlam.github.io/">
     <meta property="og:title" content="Jim Lam — CV">
@@ -64,9 +64,9 @@
             </nav>
             <div class="search-container" role="search">
                 <label for="site-search" class="visually-hidden">Search</label>
-                <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help">
+                <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
                 <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
-                <ul id="search-results" class="search-results" aria-live="polite"></ul>
+                <ul id="search-results" class="search-results" role="listbox" aria-live="polite"></ul>
             </div>
             <div class="view-modes">
                 <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
@@ -147,7 +147,7 @@
                 <article class="project-item" data-tags="dashboard; data-visualization; python; forecasting; anomaly-detection; treemap">
                     <h3>Lidl Spending Dashboard <span class="right">Ongoing</span></h3>
                     <p>Interactive personal finance dashboard covering 25 months of supermarket receipts with category treemaps, monthly spend trends, anomaly detection, short-term forecasts, stacked category breakdowns, heatmaps, Pareto views, and a receipts timeline.</p>
-                    <p><a href="http://193.123.178.35/dashboard" target="_blank" rel="noopener">View live dashboard</a></p>
+                    <p><a href="http://193.123.178.35/dashboard" target="_blank" rel="noopener noreferrer">View live dashboard</a></p>
                 </article>
                 <article class="project-item" data-tags="clojurescript; plugin; logseq; tailwindcss; rum">
                     <h3>URL+ <span class="right">Present</span></h3>
