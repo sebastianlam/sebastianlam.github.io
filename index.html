@@ -67,6 +67,7 @@
                 <!-- html-validate-disable-next prefer-native-element -->
                 <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false" aria-haspopup="listbox">
                 <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
+                <!-- html-validate-disable-next prefer-native-element -->
                 <div id="search-results" class="search-results" role="listbox" aria-live="polite" aria-label="Search results"></div>
             </div>
             <div class="view-modes">
@@ -79,7 +80,7 @@
                 <p><strong>Technical Proficiencies:</strong></p>
                 <ul>
                     <li><strong>Programming Languages:</strong> Python, Node.js, Java, LaTeX, Clojure(Script), SQL, HTML, CSS, PHP, Shell Scripting, Swift, Haskell, Prolog</li>
-                    <li><strong>Frameworks & Libraries:</strong> Vue.js, Flutter, Three.js, SwiftUI, Express.js</li>
+                    <li><strong>Frameworks &amp; Libraries:</strong> Vue.js, Flutter, Three.js, SwiftUI, Express.js</li>
                     <li><strong>Cloud Platforms:</strong> AWS (Route 53, S3, EC2), OCI (Compute Instance), Heroku</li>
                     <li><strong>Version Control:</strong> Git</li>
                     <li><strong>Design Tools:</strong> 3D Modeling (Blender, Rhino, SketchUp, AutoCAD) and 2D Design (Adobe InDesign, Illustrator)</li>
@@ -93,7 +94,7 @@
                 <div class="section-controls">
                     <div class="filter-chips" id="experience-filters" role="group" aria-label="Filter experience by tag"></div>
                 </div>
-                <div id="experience-timeline" class="timeline" aria-label="Experience timeline"></div>
+                <div id="experience-timeline" class="timeline"></div>
                 <article class="experience-item" data-tags="university; mentoring; mathematics; probability; automata">
                     <h3>University of Surrey -- LAB Pal for COM1026 &amp; Buddy Scheme Mentor <span class="right">Present</span></h3>
                     <p>Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achievement learning environment.</p>
@@ -193,7 +194,7 @@
         <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="settings-header">
                 <h3 id="settings-title">Settings</h3>
-                <button id="settings-close" aria-label="Close settings" title="Close">✕</button>
+                <button id="settings-close" type="button" aria-label="Close settings" title="Close">✕</button>
             </div>
             <div class="settings-content">
                 <div class="setting-group">
