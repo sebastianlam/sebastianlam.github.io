@@ -135,46 +135,40 @@ body.kids-mode .kids-only { display: block; }
     color: var(--muted);
 }
 
-#theme-toggle {
+/* Unified button styling for action controls */
+#theme-toggle,
+#settings-open,
+#settings-close,
+#focus-mode-toggle,
+#kids-mode-toggle,
+#read-aloud {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 8px;
+    min-height: 32px;
+    line-height: 1.2;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+#theme-toggle:hover,
+#settings-open:hover,
+#settings-close:hover,
+#focus-mode-toggle:hover,
+#kids-mode-toggle:hover,
+#read-aloud:hover {
+    color: var(--text);
+    background: var(--accent);
+}
+
+/* Add spacing only where appropriate */
+.quick-actions > button,
+.view-modes > button {
     margin-top: 10px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 14px;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-#theme-toggle:hover {
-    color: var(--text);
-}
-
-#settings-open, #settings-close, #focus-mode-toggle {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 14px;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-#read-aloud, #kids-mode-toggle {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 14px;
-    -webkit-appearance: none;
-    appearance: none;
-}
-
-#settings-open:hover, #settings-close:hover, #focus-mode-toggle:hover {
-    color: var(--text);
 }
 
 .toc {
@@ -185,7 +179,7 @@ body.kids-mode .kids-only { display: block; }
 }
 
 .toc a {
-    padding: 6px 10px;
+    padding: 8px 10px;
     color: var(--muted);
     border-left: 1px solid transparent; /* hairline */
 }
@@ -358,7 +352,8 @@ a:focus-visible, button:focus-visible {
 }
 
 .search-result {
-    padding: 6px 10px;
+    padding: 8px 10px;
+    min-height: 32px;
     cursor: pointer;
     color: var(--muted);
 }
@@ -438,3 +433,6 @@ html[data-font-scale="114"] body { font-size: 114%; }
 html[data-font-scale="116"] body { font-size: 116%; }
 html[data-font-scale="118"] body { font-size: 118%; }
 html[data-font-scale="120"] body { font-size: 120%; }
+
+/* Utility */
+.is-hidden { display: none !important; }

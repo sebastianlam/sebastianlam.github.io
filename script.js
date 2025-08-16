@@ -369,7 +369,7 @@ function renderChips(containerId, scopeSelector) {
     tags.forEach(tag => {
         const chip = document.createElement('button');
         chip.className = 'chip';
-        chip.setAttribute('role', 'button');
+        chip.type = 'button';
         chip.setAttribute('aria-pressed', 'false');
         chip.textContent = tag;
         chip.addEventListener('click', () => {
@@ -387,7 +387,7 @@ function applyFilter(scopeSelector) {
     document.querySelectorAll(`${scopeSelector} [data-tags]`).forEach(el => {
         const tags = (el.getAttribute('data-tags') || '').split(';').map(s => s.trim());
         const show = active.length === 0 || active.every(a => tags.includes(a));
-        el.style.display = show ? '' : 'none';
+        el.classList.toggle('is-hidden', !show);
     });
 }
 
@@ -525,57 +525,7 @@ function removeSummaries() {
     });
 }
 
-function celebrate() {
-    try {
-        const duration = 800;
-        const end = performance.now() + duration;
-        const colors = ['#ff7a59', '#1ecbe1', '#ffd166'];
-        function frame(now) {
-            const count = 18;
-            for (let i = 0; i < count; i++) {
-                const x = Math.random() * window.innerWidth;
-                const y = Math.random() * 40 + 10;
-                const piece = document.createElement('div');
-                piece.style.position = 'fixed';
-                piece.style.left = x + 'px';
-                piece.style.top = y + 'px';
-                piece.style.width = '8px';
-                piece.style.height = '8px';
-                piece.style.background = colors[i % colors.length];
-                piece.style.borderRadius = '2px';
-                piece.style.zIndex = '2147483647';
-                piece.style.pointerEvents = 'none';
-                document.body.appendChild(piece);
-                const dy = 40 + Math.random() * 40;
-                const dx = (Math.random() - 0.5) * 40;
-                piece.animate([
-                    { transform: 'translate(0, 0)', opacity: 1 },
-                    { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 }
-                ], { duration: 600 + Math.random() * 400, easing: 'ease-out' }).onfinish = () => piece.remove();
-            }
-            if (now < end) requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
-        beep();
-    } catch {}
-}
-
-function beep() {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'triangle';
-        o.frequency.value = 880;
-        o.connect(g);
-        g.connect(ctx.destination);
-        g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
-        o.start();
-        o.stop(ctx.currentTime + 0.26);
-    } catch {}
-}
+function celebrate() { /* intentionally no-op for disciplined UI */ }
 
 // Persist and initialize
 const savedKids = localStorage.getItem('kidsMode') === '1';
