@@ -48,11 +48,11 @@
                 <p>
                     <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a> |
                     <a href="https://github.com/sebastianlam">GitHub</a> |
-                    Phone: <a href="tel:+447754525567">+44 7754 525567</a>
+                    Phone: <a href="tel:+447754525567">+44&nbsp;7754&nbsp;525567</a>
                 </p>
                 <div class="quick-actions">
-                    <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">Toggle theme</button>
-                    <button id="settings-open" aria-label="Open settings" title="Open settings">Settings</button>
+                    <button id="theme-toggle" type="button" aria-label="Toggle dark mode" title="Toggle theme">Toggle theme</button>
+                    <button id="settings-open" type="button" aria-label="Open settings" title="Open settings">Settings</button>
                 </div>
             </header>
             <nav class="toc" aria-label="Sections">
@@ -64,12 +64,13 @@
             </nav>
             <div class="search-container" role="search">
                 <label for="site-search" class="visually-hidden">Search</label>
+                <!-- html-validate-disable-next prefer-native-element -->
                 <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false" aria-haspopup="listbox">
                 <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
                 <div id="search-results" class="search-results" role="listbox" aria-live="polite" aria-label="Search results"></div>
             </div>
             <div class="view-modes">
-                <button id="focus-mode-toggle" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
+                <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>
             </div>
         </aside>
         <main class="content" id="content" data-density="comfortable">
@@ -90,11 +91,11 @@
             <section id="experience" data-section="experience">
                 <h2>Experience</h2>
                 <div class="section-controls">
-                    <div class="filter-chips" id="experience-filters" aria-label="Filter experience by tag"></div>
+                    <div class="filter-chips" id="experience-filters" role="group" aria-label="Filter experience by tag"></div>
                 </div>
                 <div id="experience-timeline" class="timeline" aria-label="Experience timeline"></div>
                 <article class="experience-item" data-tags="university; mentoring; mathematics; probability; automata">
-                    <h3>University of Surrey -- LAB Pal for COM1026 & Buddy Scheme Mentor <span class="right">Present</span></h3>
+                    <h3>University of Surrey -- LAB Pal for COM1026 &amp; Buddy Scheme Mentor <span class="right">Present</span></h3>
                     <p>Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achievement learning environment.</p>
                 </article>
                 <article class="experience-item" data-tags="computer-vision; yolo; python; pyside; blender; synthetic-data; backend">
@@ -142,7 +143,7 @@
             <section id="personal-projects" data-section="projects">
                 <h2>Personal Projects</h2>
                 <div class="section-controls">
-                    <div class="filter-chips" id="project-filters" aria-label="Filter projects by tag"></div>
+                    <div class="filter-chips" id="project-filters" role="group" aria-label="Filter projects by tag"></div>
                 </div>
                 <article class="project-item" data-tags="dashboard; data-visualization; python; forecasting; anomaly-detection; treemap">
                     <h3>Lidl Spending Dashboard <span class="right">Ongoing</span></h3>
