@@ -1,0 +1,7 @@
+{
+	"recurse": true,
+	"silent": true,
+	"skip": [
+		"https?://(www\\.)?linkedin\\.com/.*"
+	]
+}
