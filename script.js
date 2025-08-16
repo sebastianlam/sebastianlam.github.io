@@ -268,6 +268,11 @@ document.addEventListener('keydown', (e) => {
         } else {
             openSettings();
         }
+    } else if (e.key === 'Escape') {
+        // Close mobile sidebar if open
+        if (document.body.classList.contains('sidebar-open')) {
+            closeSidebar();
+        }
     }
 });
 
@@ -1076,55 +1081,199 @@ function renderForceTree(container) {
 
         ctx.restore();
 
-        // --- Edge blur vignette ---
-        // Safari/WebKit can be finicky with CanvasRenderingContext2D.filter.
-        // Apply blur vignette only if supported; otherwise skip gracefully.
+        // --- Progressive radial blur ---
+        // Build a spatially varying blur: near center ~unblurred, edges strongly blurred.
+        // Uses multiple blurred layers composited with concentric radial masks.
         try {
             const supportsFilter = (typeof edgeCtx.filter === 'string');
             if (supportsFilter) {
-                if (edgeBuffer.width !== canvas.width || edgeBuffer.height !== canvas.height) {
-                    edgeBuffer.width = canvas.width;
-                    edgeBuffer.height = canvas.height;
-                }
                 const w = canvas.width; const h = canvas.height;
+                if (edgeBuffer.width !== w || edgeBuffer.height !== h) {
+                    edgeBuffer.width = w; edgeBuffer.height = h;
+                }
+                // Reuse additional offscreen buffers for compositing
+                if (!renderForceTree.__srcBuffer) {
+                    renderForceTree.__srcBuffer = document.createElement('canvas');
+                    renderForceTree.__srcCtx = renderForceTree.__srcBuffer.getContext('2d');
+                    renderForceTree.__layerBuffer = document.createElement('canvas');
+                    renderForceTree.__layerCtx = renderForceTree.__layerBuffer.getContext('2d');
+                    renderForceTree.__finalBuffer = document.createElement('canvas');
+                    renderForceTree.__finalCtx = renderForceTree.__finalBuffer.getContext('2d');
+                }
+                const srcBuffer = renderForceTree.__srcBuffer;
+                const srcCtx = renderForceTree.__srcCtx;
+                const layerBuffer = renderForceTree.__layerBuffer;
+                const layerCtx = renderForceTree.__layerCtx;
+                const finalBuffer = renderForceTree.__finalBuffer;
+                const finalCtx = renderForceTree.__finalCtx;
+
+                // Ensure sizes
+                if (srcBuffer.width !== w || srcBuffer.height !== h) { srcBuffer.width = w; srcBuffer.height = h; }
+                if (layerBuffer.width !== w || layerBuffer.height !== h) { layerBuffer.width = w; layerBuffer.height = h; }
+                if (finalBuffer.width !== w || finalBuffer.height !== h) { finalBuffer.width = w; finalBuffer.height = h; }
+
+                // Snapshot current canvas content as source
+                srcCtx.setTransform(1,0,0,1,0,0);
+                srcCtx.clearRect(0,0,w,h);
+                srcCtx.drawImage(canvas, 0, 0);
+
+                finalCtx.setTransform(1,0,0,1,0,0);
+                finalCtx.clearRect(0,0,w,h);
+
                 const cxPix = w / 2, cyPix = h / 2;
                 const minDim = Math.min(w, h);
-                edgeCtx.setTransform(1,0,0,1,0,0);
-                edgeCtx.clearRect(0,0,w,h);
-                // Use a slightly lighter blur to avoid Safari GPU stalls
-                edgeCtx.filter = 'blur(60px)';
-                edgeCtx.drawImage(canvas, 0, 0);
-                edgeCtx.filter = 'none';
-                edgeCtx.globalCompositeOperation = 'destination-in';
-                const r0 = minDim * 0.28;
-                const r1 = minDim * 1.00;
-                const g = edgeCtx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
-                g.addColorStop(0.0, 'rgba(0,0,0,0)');
-                g.addColorStop(0.45, 'rgba(0,0,0,1)');
-                g.addColorStop(1.0, 'rgba(0,0,0,1)');
-                edgeCtx.fillStyle = g;
-                edgeCtx.fillRect(0, 0, w, h);
-                edgeCtx.globalCompositeOperation = 'source-over';
-                // Erase crisp edges from main canvas
+
+                // Concentric rounded-rectangle bands, biased toward the edge
+                // Generate insets procedurally with an easing to push most transition near the edges
+                // Resource-friendly approach: 3 blurred levels + masks, computed at reduced resolution
+                const feather = Math.max(8, Math.round(minDim * 0.04));
+                const cornerRadius = Math.max(8, Math.round(minDim * 0.03));
+
+                // Insets pushed toward edges (center stays sharp longer)
+                const inset0 = Math.round(minDim * 0.14); // center unblurred
+                const inset1 = Math.round(minDim * 0.08); // low blur band start
+                const inset2 = Math.round(minDim * 0.04); // medium blur band start
+                const inset3 = 0;                          // heavy blur to edge
+
+                // Downscale factor for blurred computations
+                const blurScale = 0.5; // 50% resolution
+                const sw = Math.max(1, Math.round(w * blurScale));
+                const sh = Math.max(1, Math.round(h * blurScale));
+
+                // Level buffers (full-size) and a small working buffer
+                if (!renderForceTree.__smallBuffer) {
+                    renderForceTree.__smallBuffer = document.createElement('canvas');
+                    renderForceTree.__smallCtx = renderForceTree.__smallBuffer.getContext('2d');
+                    renderForceTree.__blurLow = document.createElement('canvas');
+                    renderForceTree.__blurLowCtx = renderForceTree.__blurLow.getContext('2d');
+                    renderForceTree.__blurMed = document.createElement('canvas');
+                    renderForceTree.__blurMedCtx = renderForceTree.__blurMed.getContext('2d');
+                    renderForceTree.__blurHigh = document.createElement('canvas');
+                    renderForceTree.__blurHighCtx = renderForceTree.__blurHigh.getContext('2d');
+                }
+                const smallBuffer = renderForceTree.__smallBuffer;
+                const smallCtx = renderForceTree.__smallCtx;
+                const blurLow = renderForceTree.__blurLow;
+                const blurLowCtx = renderForceTree.__blurLowCtx;
+                const blurMed = renderForceTree.__blurMed;
+                const blurMedCtx = renderForceTree.__blurMedCtx;
+                const blurHigh = renderForceTree.__blurHigh;
+                const blurHighCtx = renderForceTree.__blurHighCtx;
+                if (smallBuffer.width !== sw || smallBuffer.height !== sh) { smallBuffer.width = sw; smallBuffer.height = sh; }
+                if (blurLow.width !== w || blurLow.height !== h) { blurLow.width = w; blurLow.height = h; }
+                if (blurMed.width !== w || blurMed.height !== h) { blurMed.width = w; blurMed.height = h; }
+                if (blurHigh.width !== w || blurHigh.height !== h) { blurHigh.width = w; blurHigh.height = h; }
+
+                function computeBlurLevel(dstCtx, radiusFullPx) {
+                    const rSmall = Math.max(0, Math.round(radiusFullPx * blurScale));
+                    smallCtx.setTransform(1,0,0,1,0,0);
+                    smallCtx.clearRect(0,0,sw,sh);
+                    smallCtx.filter = rSmall > 0 ? `blur(${rSmall}px)` : 'none';
+                    smallCtx.drawImage(srcBuffer, 0, 0, w, h, 0, 0, sw, sh);
+                    smallCtx.filter = 'none';
+                    dstCtx.setTransform(1,0,0,1,0,0);
+                    dstCtx.clearRect(0,0,w,h);
+                    dstCtx.drawImage(smallBuffer, 0, 0, sw, sh, 0, 0, w, h);
+                }
+
+                // Compute three blur levels (low/med/high)
+                computeBlurLevel(blurLowCtx, 16);
+                computeBlurLevel(blurMedCtx, 48);
+                computeBlurLevel(blurHighCtx, 140);
+
+                // Offscreen for alpha masks
+                if (!renderForceTree.__maskBuffer) {
+                    renderForceTree.__maskBuffer = document.createElement('canvas');
+                    renderForceTree.__maskCtx = renderForceTree.__maskBuffer.getContext('2d');
+                }
+                const maskBuffer = renderForceTree.__maskBuffer;
+                const maskCtx = renderForceTree.__maskCtx;
+                if (maskBuffer.width !== w || maskBuffer.height !== h) { maskBuffer.width = w; maskBuffer.height = h; }
+
+                function drawRoundedRectMask(ctxMask, insetPxOuter, insetPxInner) {
+                    ctxMask.setTransform(1,0,0,1,0,0);
+                    ctxMask.clearRect(0,0,w,h);
+                    ctxMask.globalCompositeOperation = 'source-over';
+                    // Outer rounded rect (white)
+                    ctxMask.fillStyle = 'rgba(255,255,255,1)';
+                    const ox = insetPxOuter;
+                    const oy = insetPxOuter;
+                    const ow = w - insetPxOuter * 2;
+                    const oh = h - insetPxOuter * 2;
+                    roundRect(ctxMask, ox, oy, Math.max(0, ow), Math.max(0, oh), cornerRadius);
+                    ctxMask.fill();
+                    // Punch inner hole (make band)
+                    if (insetPxInner > insetPxOuter) {
+                        ctxMask.globalCompositeOperation = 'destination-out';
+                        const ix = insetPxInner;
+                        const iy = insetPxInner;
+                        const iw = w - insetPxInner * 2;
+                        const ih = h - insetPxInner * 2;
+                        roundRect(ctxMask, ix, iy, Math.max(0, iw), Math.max(0, ih), cornerRadius);
+                        ctxMask.fillStyle = 'rgba(255,255,255,1)';
+                        ctxMask.fill();
+                        ctxMask.globalCompositeOperation = 'source-over';
+                    }
+                }
+
+                // Compose: center (sharp) + low + medium + heavy bands
+                finalCtx.setTransform(1,0,0,1,0,0);
+                finalCtx.clearRect(0,0,w,h);
+
+                // 1) Center sharp region
+                layerCtx.setTransform(1,0,0,1,0,0);
+                layerCtx.clearRect(0,0,w,h);
+                layerCtx.drawImage(srcBuffer, 0, 0);
+                drawRoundedRectMask(maskCtx, inset0, inset0);
+                layerCtx.globalCompositeOperation = 'destination-in';
+                if (feather > 0) layerCtx.filter = `blur(${Math.max(1, Math.round(feather * 0.8))}px)`;
+                layerCtx.drawImage(maskBuffer, 0, 0);
+                layerCtx.filter = 'none';
+                layerCtx.globalCompositeOperation = 'source-over';
+                finalCtx.drawImage(layerBuffer, 0, 0);
+
+                // 2) Low blur band
+                layerCtx.clearRect(0,0,w,h);
+                layerCtx.drawImage(blurLow, 0, 0);
+                drawRoundedRectMask(maskCtx, inset1, inset0);
+                layerCtx.globalCompositeOperation = 'destination-in';
+                if (feather > 0) layerCtx.filter = `blur(${feather}px)`;
+                layerCtx.drawImage(maskBuffer, 0, 0);
+                layerCtx.filter = 'none';
+                layerCtx.globalCompositeOperation = 'source-over';
+                finalCtx.drawImage(layerBuffer, 0, 0);
+
+                // 3) Medium blur band
+                layerCtx.clearRect(0,0,w,h);
+                layerCtx.drawImage(blurMed, 0, 0);
+                drawRoundedRectMask(maskCtx, inset2, inset1);
+                layerCtx.globalCompositeOperation = 'destination-in';
+                if (feather > 0) layerCtx.filter = `blur(${feather}px)`;
+                layerCtx.drawImage(maskBuffer, 0, 0);
+                layerCtx.filter = 'none';
+                layerCtx.globalCompositeOperation = 'source-over';
+                finalCtx.drawImage(layerBuffer, 0, 0);
+
+                // 4) Heavy blur to edge
+                layerCtx.clearRect(0,0,w,h);
+                layerCtx.drawImage(blurHigh, 0, 0);
+                drawRoundedRectMask(maskCtx, inset3, inset2);
+                layerCtx.globalCompositeOperation = 'destination-in';
+                if (feather > 0) layerCtx.filter = `blur(${feather}px)`;
+                layerCtx.drawImage(maskBuffer, 0, 0);
+                layerCtx.filter = 'none';
+                layerCtx.globalCompositeOperation = 'source-over';
+                finalCtx.drawImage(layerBuffer, 0, 0);
+
+                // Replace main canvas with progressive blur composite
                 ctx.save();
-                ctx.globalCompositeOperation = 'destination-out';
-                const gErase = ctx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
-                gErase.addColorStop(0.0, 'rgba(0,0,0,0)');
-                gErase.addColorStop(0.55, 'rgba(0,0,0,1)');
-                gErase.addColorStop(1.0, 'rgba(0,0,0,1)');
-                ctx.fillStyle = gErase;
-                ctx.fillRect(0, 0, w, h);
-                ctx.restore();
-                // Overlay blurred edges
-                ctx.drawImage(edgeBuffer, 0, 0);
-                ctx.save();
-                ctx.globalAlpha = 0.7;
-                ctx.drawImage(edgeBuffer, 0, 0);
-                ctx.globalAlpha = 1.0;
+                ctx.setTransform(1,0,0,1,0,0);
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(finalBuffer, 0, 0);
                 ctx.restore();
             }
         } catch (e) {
-            // Skip vignette on error (Safari fallback)
+            // Skip progressive blur on error
         }
     }
 
@@ -1215,3 +1364,74 @@ function initSkillsGraphs() {
 
 // Defer to next frame to ensure DOM is ready
 requestAnimationFrame(initSkillsGraphs);
+
+// Copy-on-click for emails
+document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const a = target.closest('a.copy-on-click');
+    if (!a) return;
+    const text = a.getAttribute('data-copy-text') || a.textContent || '';
+    if (!text) return;
+    e.preventDefault();
+    try {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyToast(e.clientX, e.clientY);
+        }).catch(() => {
+            // Fallback using a temporary textarea
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+            showCopyToast(e.clientX, e.clientY);
+        });
+    } catch {}
+});
+
+function showCopyToast(x, y) {
+    const el = document.createElement('div');
+    el.className = 'copy-cursor-toast';
+    el.textContent = 'COPIED!';
+    // Offset to the right of the cursor with slight upward shift
+    const offsetX = 0;
+    const offsetY = -12;
+    el.style.left = `${Math.round(x + offsetX)}px`;
+    el.style.top = `${Math.round(y + offsetY)}px`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.remove(); }, 1300);
+}
+
+// ---- Mobile sidebar (off-canvas) ----
+const sidebarOpenBtn = document.getElementById('sidebar-open');
+const sidebarCloseBtn = document.getElementById('sidebar-close');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+function openSidebar() {
+    document.body.classList.add('sidebar-open');
+    sidebarOverlay?.removeAttribute('hidden');
+    sidebarOpenBtn?.setAttribute('aria-expanded', 'true');
+}
+
+function closeSidebar() {
+    document.body.classList.remove('sidebar-open');
+    sidebarOverlay?.setAttribute('hidden', '');
+    sidebarOpenBtn?.setAttribute('aria-expanded', 'false');
+}
+
+sidebarOpenBtn?.addEventListener('click', openSidebar);
+sidebarCloseBtn?.addEventListener('click', closeSidebar);
+sidebarOverlay?.addEventListener('click', closeSidebar);
+
+// Close drawer when a TOC link is tapped
+document.querySelectorAll('.toc a').forEach(a => {
+    a.addEventListener('click', () => {
+        if (window.innerWidth <= 900) closeSidebar();
+    });
+});
+
+// Close sidebar when switching to desktop
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) closeSidebar();
+});

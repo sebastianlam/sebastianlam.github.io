@@ -37,15 +37,16 @@
 </head>
 <body>
     <a class="visually-hidden" href="#content">Skip to main content</a>
+    <button id="sidebar-open" type="button" class="sidebar-toggle" aria-label="Open menu" title="Open menu">Menu</button>
     <div class="layout" id="app-root">
         <aside class="sidebar">
             <header class="profile">
                 <h1>Jim Lam</h1>
                 <dl class="contact" aria-label="Contact details">
                     <dt>Email</dt>
-                    <dd><a href="mailto:jim.sebastian.lam@gmail.com">jim.sebastian.lam@gmail.com</a></dd>
+                    <dd><a href="#" class="copy-on-click" data-copy-text="jim.sebastian.lam@gmail.com" role="button" aria-label="Copy email to clipboard" title="Click to copy">jim.sebastian.lam@gmail.com</a></dd>
                     <dt>University</dt>
-                    <dd><a href="mailto:jl03093@surrey.ac.uk">jl03093@surrey.ac.uk</a></dd>
+                    <dd><a href="#" class="copy-on-click" data-copy-text="jl03093@surrey.ac.uk" role="button" aria-label="Copy university email to clipboard" title="Click to copy">jl03093@surrey.ac.uk</a></dd>
                     <dt>Links</dt>
                     <dd>
                         <a href="https://www.linkedin.com/in/jim-l-3154a0102/">LinkedIn</a>
@@ -75,6 +76,7 @@
                 <ul id="search-results" class="search-results" aria-live="polite" role="listbox"></ul>
             </div>
             <div id="search-help" class="sidebar-hint">Shortcuts: / search • Enter navigate • t theme • f focus • s settings</div>
+            <button id="sidebar-close" type="button" class="sidebar-close" aria-label="Close menu" title="Close">Close</button>
         </aside>
         <main class="content" id="content" data-density="comfortable">
             <section id="skills" data-section="skills">
@@ -208,6 +210,7 @@
         </main>
     </div>
     <button id="focus-exit" type="button" class="focus-exit" aria-label="Exit focus mode">Exit focus</button>
+    <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
     <div id="settings-overlay" class="settings-overlay" hidden>
         <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
             <div class="settings-header">
