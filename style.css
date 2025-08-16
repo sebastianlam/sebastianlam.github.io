@@ -116,6 +116,8 @@ a:hover {
     color: var(--muted);
     cursor: pointer;
     font-size: 14px;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 #theme-toggle:hover {
@@ -129,6 +131,8 @@ a:hover {
     color: var(--muted);
     cursor: pointer;
     font-size: 14px;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 #settings-open:hover, #settings-close:hover, #focus-mode-toggle:hover {
@@ -331,7 +335,13 @@ a:focus-visible, button:focus-visible {
     color: var(--muted);
     cursor: pointer;
 }
-.chip[aria-pressed="true"] { color: var(--text); border-color: var(--primary); }
+.chip[aria-pressed="true"] { color: var(--text); border-color: var(--primary); background: var(--accent); }
+
+/* Focus mode toggle pressed state */
+.view-modes #focus-mode-toggle[aria-pressed="true"] {
+    color: var(--text);
+    border-bottom: 1px solid var(--primary);
+}
 
 /* Timeline */
 .timeline { position: relative; padding-left: 14px; margin: 10px 0 18px 0; }
