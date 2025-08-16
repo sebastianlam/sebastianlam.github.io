@@ -239,6 +239,9 @@ document.addEventListener('keydown', (e) => {
     } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
         openSettings();
+    } else if (e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        document.getElementById('kids-mode-toggle')?.click();
     }
 });
 
@@ -450,3 +453,157 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});
     });
 }
+
+// Kids mode: simpler headings, emoji, collapsible summaries, confetti, sounds, read-aloud
+const kidsToggle = document.getElementById('kids-mode-toggle');
+const readAloudBtn = document.getElementById('read-aloud');
+
+function setKidsMode(enabled) {
+    document.body.classList.toggle('kids-mode', enabled);
+    localStorage.setItem('kidsMode', enabled ? '1' : '0');
+    if (enabled) {
+        applyKidsLabels();
+        ensureSummaries();
+        celebrate();
+    } else {
+        restoreLabels();
+        removeSummaries();
+    }
+}
+
+function applyKidsLabels() {
+    const map = new Map([
+        ['#skills h2', '🧰 What I Can Do'],
+        ['#experience h2', '🧩 Things I Did'],
+        ['#personal-projects h2', '🛠️ Cool Things I Made'],
+        ['#education h2', '🎓 School'],
+        ['#interests h2', '🎉 Things I Like'],
+    ]);
+    map.forEach((label, sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        if (!el.getAttribute('data-orig')) el.setAttribute('data-orig', el.textContent || '');
+        el.textContent = label;
+    });
+}
+
+function restoreLabels() {
+    document.querySelectorAll('main section h2[data-orig]').forEach(h => {
+        h.textContent = h.getAttribute('data-orig') || h.textContent;
+    });
+}
+
+function ensureSummaries() {
+    document.querySelectorAll('main section').forEach(section => {
+        if (section.querySelector('.kids-summary')) return;
+        const para = Array.from(section.querySelectorAll('p, ul'))[0];
+        if (!para) return;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'kids-summary';
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'More';
+        details.appendChild(summary);
+        while (para.nextSibling) {
+            details.appendChild(para.nextSibling);
+        }
+        wrapper.appendChild(details);
+        para.after(wrapper);
+    });
+}
+
+function removeSummaries() {
+    document.querySelectorAll('.kids-summary').forEach(el => {
+        const details = el.querySelector('details');
+        if (details) {
+            // move children back before removing
+            while (details.firstChild) {
+                el.parentNode.insertBefore(details.firstChild, el);
+            }
+        }
+        el.remove();
+    });
+}
+
+function celebrate() {
+    try {
+        const duration = 800;
+        const end = performance.now() + duration;
+        const colors = ['#ff7a59', '#1ecbe1', '#ffd166'];
+        function frame(now) {
+            const count = 18;
+            for (let i = 0; i < count; i++) {
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * 40 + 10;
+                const piece = document.createElement('div');
+                piece.style.position = 'fixed';
+                piece.style.left = x + 'px';
+                piece.style.top = y + 'px';
+                piece.style.width = '8px';
+                piece.style.height = '8px';
+                piece.style.background = colors[i % colors.length];
+                piece.style.borderRadius = '2px';
+                piece.style.zIndex = '2147483647';
+                piece.style.pointerEvents = 'none';
+                document.body.appendChild(piece);
+                const dy = 40 + Math.random() * 40;
+                const dx = (Math.random() - 0.5) * 40;
+                piece.animate([
+                    { transform: 'translate(0, 0)', opacity: 1 },
+                    { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 }
+                ], { duration: 600 + Math.random() * 400, easing: 'ease-out' }).onfinish = () => piece.remove();
+            }
+            if (now < end) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+        beep();
+    } catch {}
+}
+
+function beep() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = 880;
+        o.connect(g);
+        g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.25);
+        o.start();
+        o.stop(ctx.currentTime + 0.26);
+    } catch {}
+}
+
+// Persist and initialize
+const savedKids = localStorage.getItem('kidsMode') === '1';
+setKidsMode(savedKids);
+if (kidsToggle) kidsToggle.setAttribute('aria-pressed', String(savedKids));
+
+kidsToggle?.addEventListener('click', () => {
+    const enabled = !(document.body.classList.contains('kids-mode'));
+    setKidsMode(enabled);
+    kidsToggle.setAttribute('aria-pressed', String(enabled));
+});
+
+// Read aloud using Speech Synthesis API
+function getReadableText() {
+    const active = document.elementFromPoint(window.innerWidth / 2, 120);
+    const section = active ? active.closest('section') : document.querySelector('main section');
+    const nodes = section ? Array.from(section.querySelectorAll('h2, h3, p, li')) : [];
+    return nodes.map(n => n.textContent.trim()).filter(Boolean).slice(0, 10).join('. ');
+}
+
+readAloudBtn?.addEventListener('click', () => {
+    try {
+        const text = getReadableText() || 'Hello! I am Jim. Welcome to my page.';
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.05;
+        utter.pitch = 1.1;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utter);
+        celebrate();
+    } catch {}
+});
