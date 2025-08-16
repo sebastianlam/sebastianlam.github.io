@@ -16,7 +16,7 @@ jobs:
       - run: nohup serve -s . -l 4173 >/dev/null 2>&1 &
       - run: lhci collect --url=http://localhost:4173 --numberOfRuns=3 --config=lighthouserc.json
       - run: lhci assert --config=lighthouserc.json || true
-      - run: axe http://localhost:4173 --quiet --exit
+      - run: axe http://127.0.0.1:4173 --exit --stdout
       - run: html-validate .
       - run: linkinator http://localhost:4173 --recurse --silent
 
