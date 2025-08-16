@@ -64,11 +64,9 @@
             </nav>
             <div class="search-container" role="search">
                 <label for="site-search" class="visually-hidden">Search</label>
-                <!-- html-validate-disable-next prefer-native-element -->
-                <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false" aria-haspopup="listbox">
+                <input id="site-search" type="search" placeholder="Search skills, experience, projects…" autocomplete="off" aria-describedby="search-help">
                 <div id="search-help" class="search-hint">Press / to focus • Enter to navigate</div>
-                <!-- html-validate-disable-next prefer-native-element -->
-                <div id="search-results" class="search-results" role="listbox" aria-live="polite" aria-label="Search results"></div>
+                <ul id="search-results" class="search-results" aria-live="polite" aria-label="Search results"></ul>
             </div>
             <div class="view-modes">
                 <button id="focus-mode-toggle" type="button" aria-pressed="false" title="Toggle focus mode">Focus mode</button>

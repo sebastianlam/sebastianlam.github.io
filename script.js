@@ -275,9 +275,8 @@ function renderResults(results) {
     if (!searchResults) return;
     searchResults.innerHTML = '';
     results.forEach((res, idx) => {
-        const el = document.createElement('div');
+        const el = document.createElement('li');
         el.className = 'search-result';
-        el.setAttribute('role', 'option');
         el.id = `search-option-${idx}`;
         el.setAttribute('data-target', res.type === 'section' ? `#${res.id}` : `#${res.section}`);
         el.textContent = res.title || res.text?.slice(0, 80) || 'Untitled';
