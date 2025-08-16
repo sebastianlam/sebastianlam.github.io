@@ -505,7 +505,6 @@ readAloudBtn?.addEventListener('click', () => {
         utter.pitch = 1.1;
         speechSynthesis.cancel();
         speechSynthesis.speak(utter);
-        celebrate();
     } catch {}
 });
 
@@ -684,6 +683,27 @@ function layoutTree(root, options) {
 
 function getCssVar(name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || '#999';
+}
+
+// Cache theme-derived colors and refresh only when theme changes
+let __cachedTheme = document.documentElement.getAttribute('data-theme');
+let __cachedColors = null;
+function __readColors() {
+    return {
+        border: getCssVar('--border'),
+        text: getCssVar('--text'),
+        bg: getCssVar('--bg'),
+        primary: getCssVar('--primary'),
+        accent: getCssVar('--accent')
+    };
+}
+function getThemeColors() {
+    const t = document.documentElement.getAttribute('data-theme');
+    if (!__cachedColors || t !== __cachedTheme) {
+        __cachedTheme = t;
+        __cachedColors = __readColors();
+    }
+    return __cachedColors;
 }
 
 function renderForceTree(container) {
@@ -972,10 +992,7 @@ function renderForceTree(container) {
         ctx.translate(view.x, view.y);
         ctx.scale(view.scale, view.scale);
 
-        const border = getCssVar('--border');
-        const text = getCssVar('--text');
-        const bg = getCssVar('--bg');
-        const primary = getCssVar('--primary');
+        const { border, text, bg, primary, accent } = getThemeColors();
 
         // Links
         ctx.strokeStyle = border;
@@ -1006,8 +1023,6 @@ function renderForceTree(container) {
         for (const n of nodes) {
             const x = n.x - n.width / 2;
             const y = n.y - n.height / 2;
-            const accent = getCssVar('--accent');
-            const primary = getCssVar('--primary');
             const isGroup = n.role === 'groupTechnical' || n.role === 'groupLanguages';
             const isFamily = n.role === 'familyTechnical' || n.role === 'familyLanguages';
             // Fancy fills
@@ -1062,55 +1077,55 @@ function renderForceTree(container) {
         ctx.restore();
 
         // --- Edge blur vignette ---
-        // Prepare offscreen copy of current frame and blur only the edges, then overlay
-        if (edgeBuffer.width !== canvas.width || edgeBuffer.height !== canvas.height) {
-            edgeBuffer.width = canvas.width;
-            edgeBuffer.height = canvas.height;
+        // Safari/WebKit can be finicky with CanvasRenderingContext2D.filter.
+        // Apply blur vignette only if supported; otherwise skip gracefully.
+        try {
+            const supportsFilter = (typeof edgeCtx.filter === 'string');
+            if (supportsFilter) {
+                if (edgeBuffer.width !== canvas.width || edgeBuffer.height !== canvas.height) {
+                    edgeBuffer.width = canvas.width;
+                    edgeBuffer.height = canvas.height;
+                }
+                const w = canvas.width; const h = canvas.height;
+                const cxPix = w / 2, cyPix = h / 2;
+                const minDim = Math.min(w, h);
+                edgeCtx.setTransform(1,0,0,1,0,0);
+                edgeCtx.clearRect(0,0,w,h);
+                // Use a slightly lighter blur to avoid Safari GPU stalls
+                edgeCtx.filter = 'blur(60px)';
+                edgeCtx.drawImage(canvas, 0, 0);
+                edgeCtx.filter = 'none';
+                edgeCtx.globalCompositeOperation = 'destination-in';
+                const r0 = minDim * 0.28;
+                const r1 = minDim * 1.00;
+                const g = edgeCtx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
+                g.addColorStop(0.0, 'rgba(0,0,0,0)');
+                g.addColorStop(0.45, 'rgba(0,0,0,1)');
+                g.addColorStop(1.0, 'rgba(0,0,0,1)');
+                edgeCtx.fillStyle = g;
+                edgeCtx.fillRect(0, 0, w, h);
+                edgeCtx.globalCompositeOperation = 'source-over';
+                // Erase crisp edges from main canvas
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-out';
+                const gErase = ctx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
+                gErase.addColorStop(0.0, 'rgba(0,0,0,0)');
+                gErase.addColorStop(0.55, 'rgba(0,0,0,1)');
+                gErase.addColorStop(1.0, 'rgba(0,0,0,1)');
+                ctx.fillStyle = gErase;
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
+                // Overlay blurred edges
+                ctx.drawImage(edgeBuffer, 0, 0);
+                ctx.save();
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(edgeBuffer, 0, 0);
+                ctx.globalAlpha = 1.0;
+                ctx.restore();
+            }
+        } catch (e) {
+            // Skip vignette on error (Safari fallback)
         }
-        const w = canvas.width; const h = canvas.height;
-        const cxPix = w / 2, cyPix = h / 2;
-        const minDim = Math.min(w, h);
-        edgeCtx.setTransform(1,0,0,1,0,0);
-        edgeCtx.clearRect(0,0,w,h);
-        // Draw blurred frame into offscreen (very heavy blur)
-        edgeCtx.filter = 'blur(80px)';
-        edgeCtx.drawImage(canvas, 0, 0);
-        edgeCtx.filter = 'none';
-        // Mask so center is transparent and edges opaque (apply to offscreen only)
-        edgeCtx.globalCompositeOperation = 'destination-in';
-        const r0 = minDim * 0.28; // start fade closer to center for stronger effect
-        const r1 = minDim * 1.00; // push blur to very edge
-        const g = edgeCtx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
-        g.addColorStop(0.0, 'rgba(0,0,0,0)');
-        g.addColorStop(0.45, 'rgba(0,0,0,1)');
-        g.addColorStop(1.0, 'rgba(0,0,0,1)');
-        edgeCtx.fillStyle = g;
-        edgeCtx.fillRect(0, 0, w, h);
-        edgeCtx.globalCompositeOperation = 'source-over';
-        // First, erase the crisp edges from the main canvas using the same mask
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-out';
-        const gErase = ctx.createRadialGradient(cxPix, cyPix, r0, cxPix, cyPix, r1);
-        gErase.addColorStop(0.0, 'rgba(0,0,0,0)');
-        gErase.addColorStop(0.55, 'rgba(0,0,0,1)');
-        gErase.addColorStop(1.0, 'rgba(0,0,0,1)');
-        ctx.fillStyle = gErase;
-        ctx.fillRect(0, 0, w, h);
-        ctx.restore();
-        // Overlay the blurred edges on the main canvas, leaving the crisp center intact
-        ctx.drawImage(edgeBuffer, 0, 0);
-        // Draw a second time with partial alpha to intensify
-        ctx.save();
-        ctx.globalAlpha = 0.75;
-        ctx.drawImage(edgeBuffer, 0, 0);
-        ctx.globalAlpha = 1.0;
-        ctx.restore();
-        // Third pass for a very heavy vignette
-        ctx.save();
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(edgeBuffer, 0, 0);
-        ctx.globalAlpha = 1.0;
-        ctx.restore();
     }
 
     // Interaction
