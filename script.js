@@ -24,6 +24,8 @@ const observer = new IntersectionObserver((entries) => {
         if (entry.isIntersecting) {
             tocLinks.forEach(a => a.classList.remove('active'));
             link.classList.add('active');
+            link.setAttribute('aria-current', 'location');
+            tocLinks.filter(a => a !== link).forEach(a => a.removeAttribute('aria-current'));
         }
     });
 }, { rootMargin: '-40% 0px -55% 0px', threshold: [0, 1] });
@@ -119,7 +121,10 @@ function openSettings() {
         }
     }
     panel?.addEventListener('keydown', trap);
-    panel?.setAttribute('data-trap', '1');
+    if (panel) {
+        panel.setAttribute('data-trap', '1');
+        panel._trapHandler = trap;
+    }
 }
 
 function closeSettings() {
@@ -128,6 +133,10 @@ function closeSettings() {
     document.removeEventListener('keydown', onSettingsKeydown);
     const panel = settingsOverlay?.querySelector('.settings-panel');
     if (panel && panel.getAttribute('data-trap') === '1') {
+        if (panel._trapHandler) {
+            panel.removeEventListener('keydown', panel._trapHandler);
+            delete panel._trapHandler;
+        }
         panel.removeAttribute('data-trap');
     }
     // Restore focus
@@ -190,6 +199,9 @@ function setFocusMode(enabled) {
 }
 const savedFocus = localStorage.getItem('focusMode') === '1';
 setFocusMode(savedFocus);
+if (focusModeToggle) {
+    focusModeToggle.setAttribute('aria-pressed', String(savedFocus));
+}
 focusModeToggle?.addEventListener('click', () => {
     const enabled = !document.body.classList.contains('focus-mode');
     setFocusMode(enabled);

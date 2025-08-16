@@ -1,4 +1,4 @@
-const CACHE = 'cv-cache-v1';
+const CACHE = 'cv-cache-v2';
 const ASSETS = [
     '/',
     '/index.html',
@@ -19,27 +19,45 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-    );
+    event.waitUntil((async () => {
+        try {
+            if (self.registration.navigationPreload) {
+                await self.registration.navigationPreload.enable();
+            }
+        } catch (e) {}
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    })());
     self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
     const req = event.request;
     if (req.method !== 'GET') return;
-    event.respondWith(
-        caches.match(req).then((cached) => {
-            if (cached) return cached;
-            return fetch(req)
-                .then((resp) => {
-                    const copy = resp.clone();
-                    caches.open(CACHE).then((cache) => cache.put(req, copy));
-                    return resp;
-                })
-                .catch(() => caches.match('/index.html'));
-        })
-    );
+    const isNavigate = req.mode === 'navigate';
+    event.respondWith((async () => {
+        const cache = await caches.open(CACHE);
+        if (isNavigate) {
+            try {
+                const preload = self.registration.navigationPreload ? await event.preloadResponse : null;
+                const resp = preload || await fetch(req);
+                return resp;
+            } catch (e) {
+                const fallback = await cache.match('/index.html');
+                if (fallback) return fallback;
+            }
+        }
+        const cached = await cache.match(req);
+        if (cached) return cached;
+        try {
+            const resp = await fetch(req);
+            cache.put(req, resp.clone());
+            return resp;
+        } catch (e) {
+            const offline = await cache.match('/index.html');
+            return offline || Response.error();
+        }
+    })());
 });
 
 
