@@ -261,7 +261,7 @@ document.addEventListener('keydown', (e) => {
         focusModeToggle?.click();
     } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
-        // Toggle settings — if open, close; if closed, open
+        // Toggle settings - if open, close; if closed, open
         const isSettingsOpen = !settingsOverlay?.hasAttribute('hidden');
         if (isSettingsOpen) {
             closeSettings();
@@ -447,7 +447,7 @@ function parseDateRange(text) {
         if (yearMatch) return new Date(parseInt(yearMatch[1], 10), 0, 1);
         return null;
     }
-    const parts = text.split(/--|–|—/);
+    const parts = text.split(/--|\u2013|\u2014|\s-\s/);
     const start = parsePartial(parts[0]);
     const end = present ? new Date() : parsePartial(parts[1] || parts[0]) || start;
     return { start, end, present };
@@ -459,7 +459,7 @@ function buildTimeline() {
         const h3 = item.querySelector('h3');
         const rawTitle = h3?.textContent || '';
         const dateText = h3?.querySelector('.right')?.textContent || item.querySelector('.right')?.textContent || '';
-        const cleanTitle = dateText ? rawTitle.replace(dateText, '').trim().replace(/[\-–—]\s*$/, '').trim() : rawTitle.trim();
+        const cleanTitle = dateText ? rawTitle.replace(dateText, '').trim().replace(/[\-\u2013\u2014]\s*$/, '').trim() : rawTitle.trim();
         const dates = parseDateRange(dateText);
         if (!dates.start) return;
         list.push({ title: cleanTitle, start: dates.start, end: dates.end, present: dates.present });
