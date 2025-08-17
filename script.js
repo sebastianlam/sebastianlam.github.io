@@ -223,7 +223,7 @@ fontScale?.addEventListener('input', () => {
     localStorage.setItem('fontScale', String(val));
 });
 
-// mode
+// Focus mode
 const focusModeToggle = document.getElementById('focus-mode-toggle');
 const focusExitButton = document.getElementById('focus-exit');
 function setFocusMode(enabled) {
@@ -261,7 +261,7 @@ document.addEventListener('keydown', (e) => {
         focusModeToggle?.click();
     } else if (e.key.toLowerCase() === 's') {
         e.preventDefault();
-        // Toggle settings - if open, close; if closed, open
+        // Toggle settings — if open, close; if closed, open
         const isSettingsOpen = !settingsOverlay?.hasAttribute('hidden');
         if (isSettingsOpen) {
             closeSettings();
@@ -1393,7 +1393,7 @@ document.addEventListener('click', (e) => {
 function showCopyToast(x, y) {
     const el = document.createElement('div');
     el.className = 'copy-cursor-toast';
-    el.textContent = 'COPIED!';
+    el.textContent = 'Copied';
     // Offset to the right of the cursor with slight upward shift
     const offsetX = 0;
     const offsetY = -12;
