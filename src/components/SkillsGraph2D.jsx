@@ -309,37 +309,56 @@ const SkillsGraph2D = () => {
     // --- Interaction ---
     let dragging = null;
     let repelPoints = [];
+    let cachedRepelElements = [];
+    let lastRepelCacheUpdate = 0;
 
-    const updateRepelPoints = () => {
-      // Find leaf elements with text content
-      const elements = document.querySelectorAll('.repel-target');
-      const points = [];
+    const updateRepelPoints = (forceRefreshCache = false) => {
+      const now = performance.now();
       
-      elements.forEach(root => {
-        // Deep search for leaf elements with text
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-          acceptNode: (node) => {
-            // Only accept elements that have text and no element children
-            if (node.children.length === 0 && node.textContent.trim().length > 0) {
-              return NodeFilter.FILTER_ACCEPT;
+      // Refresh the list of leaf elements every 2 seconds or if forced
+      if (forceRefreshCache || now - lastRepelCacheUpdate > 2000 || cachedRepelElements.length === 0) {
+        const roots = document.querySelectorAll('.repel-target');
+        const leafElements = [];
+        
+        roots.forEach(root => {
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+            acceptNode: (node) => {
+              if (node.children.length === 0 && node.textContent.trim().length > 0) {
+                return NodeFilter.FILTER_ACCEPT;
+              }
+              return NodeFilter.FILTER_SKIP;
             }
-            return NodeFilter.FILTER_SKIP;
+          });
+
+          let node;
+          while (node = walker.nextNode()) {
+            leafElements.push(node);
           }
         });
+        cachedRepelElements = leafElements;
+        lastRepelCacheUpdate = now;
+      }
 
-        let node;
-        while (node = walker.nextNode()) {
-          const rect = node.getBoundingClientRect();
-          if (rect.bottom > -100 && rect.top < window.innerHeight + 100) {
-            points.push({
-              x: rect.left + rect.width / 2,
-              y: rect.top + rect.height / 2,
-              w: rect.width,
-              h: rect.height
-            });
-          }
+      // Update rects for all cached leaf elements every frame
+      const points = [];
+      const vh = window.innerHeight;
+      
+      for (let i = 0; i < cachedRepelElements.length; i++) {
+        const el = cachedRepelElements[i];
+        // Check if element is still in DOM
+        if (!el.isConnected) continue;
+        
+        const rect = el.getBoundingClientRect();
+        // Only add points that are near the viewport
+        if (rect.bottom > -100 && rect.top < vh + 100) {
+          points.push({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2,
+            w: rect.width,
+            h: rect.height
+          });
         }
-      });
+      }
       repelPoints = points;
     };
 
@@ -403,7 +422,6 @@ const SkillsGraph2D = () => {
     };
 
     let raf;
-    let lastRepelUpdate = 0;
     let isPaused = false;
 
     const handleVisibilityChange = () => {
@@ -438,11 +456,8 @@ const SkillsGraph2D = () => {
         }
       }
 
-      // Periodic update of DOM repel points - increased interval to 250ms for performance
-      if (now - lastRepelUpdate > 250) {
-        updateRepelPoints();
-        lastRepelUpdate = now;
-      }
+      // Update DOM repel points every frame to match WebGL FPS
+      updateRepelPoints();
 
       // Step Physics
       nodes_sim.forEach(n => { n.ax = 0; n.ay = 0; });
