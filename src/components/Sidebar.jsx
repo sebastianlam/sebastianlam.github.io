@@ -40,6 +40,7 @@ const Sidebar = () => {
               onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
               className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
               title="Toggle Density"
+              aria-label="Toggle content density"
             >
               <LayoutGrid size={14} />
             </button>
@@ -47,6 +48,7 @@ const Sidebar = () => {
               onClick={() => setFocusMode(true)}
               className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
               title="Focus Mode"
+              aria-label="Enter focus mode"
             >
               <Maximize2 size={14} />
             </button>
@@ -54,6 +56,7 @@ const Sidebar = () => {
               onClick={handleReadAloud}
               className={`p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors ${isReading ? 'bg-zinc-900 text-white dark:bg-white dark:text-black' : ''}`}
               title="Read Aloud"
+              aria-label={isReading ? "Stop reading aloud" : "Read page content aloud"}
             >
               {isReading ? <VolumeX size={14} /> : <Volume2 size={14} />}
             </button>
@@ -64,9 +67,9 @@ const Sidebar = () => {
 
       <footer className="pt-8">
         <div className="flex gap-4 mb-4">
-          <a href={cvData.personal.github} target="_blank" rel="noopener"><Github size={18} className="opacity-50 hover:opacity-100" /></a>
-          <a href={cvData.personal.linkedin} target="_blank" rel="noopener"><Linkedin size={18} className="opacity-50 hover:opacity-100" /></a>
-          <a href={`mailto:${cvData.personal.email}`}><Mail size={18} className="opacity-50 hover:opacity-100" /></a>
+          <a href={cvData.personal.github} target="_blank" rel="noopener" aria-label="GitHub Profile"><Github size={18} className="opacity-50 hover:opacity-100" /></a>
+          <a href={cvData.personal.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn Profile"><Linkedin size={18} className="opacity-50 hover:opacity-100" /></a>
+          <a href={`mailto:${cvData.personal.email}`} aria-label="Send Email"><Mail size={18} className="opacity-50 hover:opacity-100" /></a>
         </div>
         <p className="text-[10px] font-mono opacity-30">© 2026 {cvData.personal.name}</p>
       </footer>

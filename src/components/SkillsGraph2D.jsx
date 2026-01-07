@@ -404,7 +404,18 @@ const SkillsGraph2D = () => {
 
     let raf;
     let lastRepelUpdate = 0;
+    let isPaused = false;
+
+    const handleVisibilityChange = () => {
+      isPaused = document.hidden;
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const animate = () => {
+      if (isPaused) {
+        raf = requestAnimationFrame(animate);
+        return;
+      }
       const now = performance.now();
 
       // --- Performance Tracking & Dynamic Quality ---
@@ -638,6 +649,7 @@ const SkillsGraph2D = () => {
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(raf);
     };
   }, [theme]);

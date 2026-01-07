@@ -9,9 +9,15 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark', 'hc');
-    root.classList.add('dark');
-  }, []);
+    root.classList.remove('light', 'dark');
+    
+    if (theme === 'auto') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.add(isDark ? 'dark' : 'light');
+    } else {
+      root.classList.add(theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     localStorage.setItem('density', density);
