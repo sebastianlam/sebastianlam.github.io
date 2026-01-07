@@ -296,16 +296,19 @@ const SkillsGraph2D = () => {
     const baseFont = `bold ${baseFontSize}px "Inter", sans-serif`;
     ctx.font = baseFont;
 
-    const measureLabelWidth = (label) => {
-      ctx.font = baseFont;
+    const measureLabelWidth = (label, depth = 1) => {
+      const fontSize = depth === 0 
+        ? (window.innerWidth < 768 ? 60 : 120) 
+        : (window.innerWidth < 768 ? 16 : 12);
+      ctx.font = `bold ${fontSize}px "Inter", sans-serif`;
       const w = Math.ceil(ctx.measureText(label).width);
-      return w + 10;
+      return w + (depth === 0 ? 40 : 10);
     };
 
     const rootFixed = { x: width / 2, y: height / 2 };
     const nodes_sim = layout.nodes.map(n => {
       const label = n.node.name;
-      const w = measureLabelWidth(label);
+      const w = measureLabelWidth(label, n.depth);
 
       // Radial Seeding: Distribute nodes by group (baseHue) and depth
       let initX, initY;
@@ -314,7 +317,7 @@ const SkillsGraph2D = () => {
         initY = rootFixed.y;
       } else {
         const angle = (n.baseHue * Math.PI) / 180;
-        const distance = n.depth * 180;
+        const distance = n.depth === 1 ? 350 : n.depth * 180;
         const jitter = 10;
         const flatteningFactor = 0.4; // Squash vertically
         initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * jitter;
@@ -333,7 +336,7 @@ const SkillsGraph2D = () => {
         ax: 0,
         ay: 0,
         width: w,
-        height: 16,
+        height: n.depth === 0 ? 80 : 16,
         fx: null,
         fy: null,
         color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff'))
@@ -343,7 +346,7 @@ const SkillsGraph2D = () => {
     const links_sim = layout.links.map(l => ({
       source: nodes_sim[layout.nodes.indexOf(l.source)],
       target: nodes_sim[layout.nodes.indexOf(l.target)],
-      rest: 120 + l.source.depth * 40
+      rest: (l.source.depth === 0 ? 250 : 120) + l.source.depth * 40
     }));
 
     // --- Physics ---
@@ -483,7 +486,9 @@ const SkillsGraph2D = () => {
     const hit = (x, y) => {
       for (let i = nodes_sim.length - 1; i >= 0; i--) {
         const n = nodes_sim[i];
-        if (Math.abs(x - n.x) < n.width/2 && Math.abs(y - n.y) < n.height/2) return n;
+        const hitWidth = n.depth === 0 ? n.width : n.width; // n.width is already larger for depth 0
+        const hitHeight = n.depth === 0 ? n.height : n.height;
+        if (Math.abs(x - n.x) < hitWidth/2 && Math.abs(y - n.y) < hitHeight/2) return n;
       }
       return null;
     };
@@ -543,8 +548,10 @@ const SkillsGraph2D = () => {
       // Different depths shift at different speeds and offsets
       let hue;
       if (depth === 0) {
-        // Root stays white-ish rainbow
-        hue = (time * 0.05 + index * 15) % 360;
+        // Root stays white-ish unless moving very fast
+        const baseColor = '#ffffff';
+        const fastRed = '#ef4444';
+        return velFactor > 0.05 ? lerpColor(baseColor, fastRed, velFactor) : baseColor;
       } else if (depth === 1) {
         // Categories have a static equidistant hue
         hue = baseHue;
@@ -821,23 +828,35 @@ const SkillsGraph2D = () => {
         const nodeColor = getLSDColor(idx, now, velFactor, n.depth, n.baseHue);
         
         // Draw Nucleus
-        ctx.fillStyle = nodeColor;
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, 2.5 / view.scale, 0, Math.PI * 2);
-        ctx.fill();
+        if (n.depth !== 0) {
+          ctx.fillStyle = nodeColor;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, 2.5 / view.scale, 0, Math.PI * 2);
+          ctx.fill();
 
-        // Add glow for active/fast nodes
-        if (velFactor > 0.2) {
-          ctx.shadowBlur = 15 * velFactor;
-          ctx.shadowColor = nodeColor;
+          // Add glow for active/fast nodes
+          if (velFactor > 0.2) {
+            ctx.shadowBlur = 15 * velFactor;
+            ctx.shadowColor = nodeColor;
+          }
         }
 
         // Label Presentation (Offset above nucleus)
-        const fontSize = window.innerWidth < 768 ? 16 : 12;
-        ctx.font = `bold ${fontSize}px "Inter"`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(n.name, n.x, n.y - (10 / view.scale));
+        if (n.depth === 0) {
+          const fontSize = window.innerWidth < 768 ? 60 : 120;
+          ctx.font = `bold ${fontSize}px "Inter"`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.letterSpacing = '-4px';
+          ctx.fillText(n.name.toUpperCase(), n.x, n.y);
+          ctx.letterSpacing = '0px';
+        } else {
+          const fontSize = window.innerWidth < 768 ? 16 : 12;
+          ctx.font = `bold ${fontSize}px "Inter"`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(n.name, n.x, n.y - (10 / view.scale));
+        }
         
         ctx.shadowBlur = 0;
       });

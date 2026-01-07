@@ -79,7 +79,7 @@ function App() {
             </div>
           </div>
 
-          <Section title="Skills" id="skills">
+          <Section title="Skills" id="skills" hideTitle>
             <div className="h-[400px]" /> {/* Spacer where the graph used to be */}
           </Section>
 
