@@ -153,17 +153,21 @@ const SkillsGraph2D = () => {
           float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
           
           if (blurAmount < 0.2) {
-            // 4x MSAA (Rotated Grid Supersampling) for smooth 2D rendering
+            // 16x MSAA (Jittered Grid) for ultra-smooth 2D rendering
             vec2 texelSize = 1.0 / uResolution;
             vec4 color = vec4(0.0);
             
-            // RGSS Pattern
-            color += texture2D(uTexture, vUv + vec2(-0.125, -0.375) * texelSize);
-            color += texture2D(uTexture, vUv + vec2(0.375, -0.125) * texelSize);
-            color += texture2D(uTexture, vUv + vec2(-0.375, 0.125) * texelSize);
-            color += texture2D(uTexture, vUv + vec2(0.125, 0.375) * texelSize);
+            // 4x4 Jittered Grid for superior edge smoothing
+            for (int x = 0; x < 4; x++) {
+              for (int y = 0; y < 4; y++) {
+                vec2 offset = (vec2(float(x), float(y)) - 1.5) * 0.25;
+                // Add a small jitter based on position for even better smoothing
+                float jitter = random(vUv + vec2(float(x), float(y))) * 0.1;
+                color += texture2D(uTexture, vUv + (offset + jitter) * texelSize);
+              }
+            }
             
-            gl_FragColor = color * 0.25;
+            gl_FragColor = color / 16.0;
             return;
           }
 
