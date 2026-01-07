@@ -188,7 +188,7 @@ const SkillsGraph2D = () => {
             
             // Optimization: Only apply chromatic aberration to every other sample
             if (mod(float(i), 2.0) < 1.0) {
-              float aberration = 1.0 + (uEnergy * 0.15 * (blurAmount / uRadius));
+              float aberration = 1.0 + (uEnergy * 0.05 * (blurAmount / uRadius));
               color.r += texture2D(uTexture, vUv + offset * aberration).r;
               color.g += texture2D(uTexture, vUv + offset).g;
               color.b += texture2D(uTexture, vUv + offset / aberration).b;
@@ -201,7 +201,7 @@ const SkillsGraph2D = () => {
           vec4 finalColor = color / total;
 
           // Animated Grain/Noise
-          float grain = (random(vUv + fract(uTime)) - 0.5) * 0.05;
+          float grain = (random(vUv + fract(uTime)) - 0.5) * 0.02;
           // Only apply grain to blurred areas to simulate "frosted" look
           finalColor.rgb += grain * (blurAmount / uRadius);
           
@@ -549,31 +549,27 @@ const SkillsGraph2D = () => {
       // Different depths shift at different speeds and offsets
       let hue;
       if (depth === 0) {
-        // Root stays white-ish unless moving very fast
+        // Root stays clean white
         const baseColor = '#ffffff';
-        const fastRed = '#ef4444';
-        return velFactor > 0.05 ? lerpColor(baseColor, fastRed, velFactor) : baseColor;
+        const moveColor = '#f0f0f0'; // Very subtle shift on movement
+        return velFactor > 0.1 ? lerpColor(baseColor, moveColor, velFactor) : baseColor;
       } else if (depth === 1) {
-        // Categories have a static equidistant hue
+        // Categories have a static hue
         hue = baseHue;
       } else {
-        // Skill items shift within range of parent node (+/- 30 degrees)
-        const range = 30;
-        const shift = Math.sin(time * 0.001 + index) * range;
+        // Skill items shift within a very narrow range (+/- 10 degrees)
+        const range = 10;
+        const shift = Math.sin(time * 0.0005 + index) * range;
         hue = (baseHue + shift + 360) % 360;
       }
       
-      // Hierarchy based on depth:
-      // Depth 0 (Root): High lightness, low saturation (Ethereal White-ish Rainbow)
-      // Depth 1 (Category): High saturation, mid lightness (Vibrant Punchy)
-      // Depth 2 (Skill): Mid saturation, lower lightness (Deep Detailed)
-      // Depth 3+ (Sub-skill): Lower saturation, lower lightness
-      let s = 0.8, l = 0.6;
-      if (depth === 0) { s = 0.3; l = 0.9; }
-      else if (depth === 1) { s = 0.9; l = 0.6; }
-      else if (depth === 2) { s = 0.6; l = 0.5; }
-      else if (depth === 3) { s = 0.5; l = 0.4; }
-      else { s = 0.4; l = 0.3; }
+      // Muted color palette with lower saturation and balanced lightness
+      let s = 0.3, l = 0.7; 
+      if (depth === 0) { s = 0.0; l = 1.0; }
+      else if (depth === 1) { s = 0.4; l = 0.75; } // Muted but distinct
+      else if (depth === 2) { s = 0.2; l = 0.65; } // Very subtle
+      else if (depth === 3) { s = 0.1; l = 0.55; } // Almost monochrome
+      else { s = 0.05; l = 0.45; }
 
       // Convert HSL to RGB for lerpColor
       const h = hue / 360;
@@ -814,12 +810,12 @@ const SkillsGraph2D = () => {
         ctx.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
 
         // Pass 1: The "Aura" (Soft anti-aliasing glow)
-        ctx.strokeStyle = setAlpha(lsdColor, 0.15);
+        ctx.strokeStyle = setAlpha(lsdColor, 0.08);
         ctx.lineWidth = scaleAdjustedWidth * 4;
         ctx.stroke();
 
         // Pass 2: The "Core" (Sharp connection)
-        ctx.strokeStyle = setAlpha(lsdColor, 0.5);
+        ctx.strokeStyle = setAlpha(lsdColor, 0.3);
         ctx.lineWidth = scaleAdjustedWidth;
         ctx.stroke();
       });
@@ -836,12 +832,12 @@ const SkillsGraph2D = () => {
         if (n.depth !== 0) {
           ctx.fillStyle = nodeColor;
           ctx.beginPath();
-          ctx.arc(n.x, n.y, 2.5 / view.scale, 0, Math.PI * 2);
+          ctx.arc(n.x, n.y, 1.5 / view.scale, 0, Math.PI * 2);
           ctx.fill();
 
           // Add glow for active/fast nodes
           if (velFactor > 0.2) {
-            ctx.shadowBlur = 15 * velFactor;
+            ctx.shadowBlur = 10 * velFactor;
             ctx.shadowColor = nodeColor;
           }
         }
