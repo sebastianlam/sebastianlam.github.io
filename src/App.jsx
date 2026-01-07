@@ -42,7 +42,7 @@ function App() {
                   )}
                   <div className="flex flex-wrap gap-2 mt-4">
                     {exp.tags.map(tag => (
-                      <span key={tag} className="px-2 py-1 text-[10px] uppercase tracking-widest border border-current opacity-30 group-hover:opacity-100 transition-opacity">
+                      <span key={tag} className="px-2 py-1 text-[10px] uppercase tracking-widest bg-zinc-100 text-black mix-blend-screen opacity-30 group-hover:opacity-100 transition-opacity">
                         {tag}
                       </span>
                     ))}

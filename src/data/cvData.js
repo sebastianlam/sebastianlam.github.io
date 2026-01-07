@@ -11,6 +11,7 @@ export const cvData = {
     location: "Guildford / Hong Kong",
   },
   skills: [
+    { name: "C++", category: "Programming Languages", level: 80 },
     { name: "Python", category: "Programming Languages", level: 90 },
     { name: "Node.js", category: "Programming Languages", level: 85 },
     { name: "Java", category: "Programming Languages", level: 80 },
@@ -25,6 +26,7 @@ export const cvData = {
     { name: "Swift", category: "Programming Languages", level: 70 },
     { name: "Haskell", category: "Programming Languages", level: 60 },
     { name: "Prolog", category: "Programming Languages", level: 60 },
+    { name: "Next.js", category: "Frameworks & Libraries", level: 75 },
     { name: "Vue.js", category: "Frameworks & Libraries", level: 85 },
     { name: "Flutter", category: "Frameworks & Libraries", level: 80 },
     { name: "Three.js", category: "Frameworks & Libraries", level: 70 },
@@ -47,6 +49,20 @@ export const cvData = {
     { name: "Mandarin", level: "Fluent" },
   ],
   experience: [
+    {
+      role: "Test Analyst Intern",
+      company: "Fime",
+      period: "September 2025 - Present",
+      tags: ["testing", "qa", "L2", "EMVco", "VISA", "contactless", "FIME"],
+      description: "Performing L2 testing for terminals in the EMVco contact and VISA contactless schemes, ensuring compliance and reliability for payment systems during a full-time placement year."
+    },
+    {
+      role: "Team Lead & TT&C Lead",
+      company: "Peryton Space Satellite Design Competition",
+      period: "September 2025 - Present",
+      tags: ["leadership", "space", "satellite", "telemetry", "tracking", "command", "SDC", "C++", "Next.js"],
+      description: "Spearheading the Peryton Space team for the current competition cycle, managing overall technical direction and continuing to lead the Telemetry, Tracking, and Command workstream."
+    },
     {
       role: "TT&C Team Lead",
       company: "Peryton Space Society",

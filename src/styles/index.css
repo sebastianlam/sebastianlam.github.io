@@ -17,6 +17,11 @@ html, body {
   min-height: 100%;
 }
 
+::selection {
+  background: #ffffff;
+  color: #000000;
+}
+
 /* Base styles for the "Big Type" look */
 h1, h2, h3 {
   @apply font-serif italic tracking-tighter;
