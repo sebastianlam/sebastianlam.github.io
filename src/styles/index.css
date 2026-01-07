@@ -11,6 +11,10 @@
   --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth !important;
+}
+
 html, body {
   background-color: #050505;
   color: #ffffff;
