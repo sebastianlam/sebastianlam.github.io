@@ -305,18 +305,19 @@ const SkillsGraph2D = () => {
       return w + (depth === 0 ? 40 : 10);
     };
 
-    const rootFixed = { x: width / 2, y: height / 2 };
+    const rootFixed = { x: 200, y: 150 };
     const nodes_sim = layout.nodes.map(n => {
       const label = n.node.name;
       const w = measureLabelWidth(label, n.depth);
 
-      // Radial Seeding: Distribute nodes by group (baseHue) and depth
+      // Seed relative to top-left root, sprouting towards bottom-right
       let initX, initY;
       if (n.depth === 0) {
         initX = rootFixed.x;
         initY = rootFixed.y;
       } else {
-        const angle = (n.baseHue * Math.PI) / 180;
+        // Map 360-degree baseHue to a 90-degree wedge sprouting bottom-right (0 to PI/2)
+        const angle = (n.baseHue / 360) * (Math.PI / 2);
         const distance = n.depth === 1 ? 300 : n.depth * 180;
         const jitter = 10;
         const flatteningFactor = 0.6; // Less squashed since root is larger
