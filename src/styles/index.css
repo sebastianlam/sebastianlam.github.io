@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #0a0a0a;
+  --color-brand-accent: #ffffff;
+}
+
+:root {
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+}
+
+/* Base styles for the "Big Type" look */
+h1, h2, h3 {
+  @apply font-serif italic tracking-tighter;
+}
+
+section {
+  @apply py-20 border-b border-black/10;
+}
+
