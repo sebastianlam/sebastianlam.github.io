@@ -28,7 +28,6 @@ function App() {
             </header>
             <div className="space-y-2 text-sm font-mono">
               <p className="text-white">{cvData.personal.email}</p>
-              <p className="text-white">{cvData.personal.phone}</p>
               <div className="flex gap-4 pt-4">
                 <a href={cvData.personal.github} target="_blank" rel="noopener" className="text-white underline uppercase text-xs font-bold tracking-widest">Github</a>
                 <a href={cvData.personal.linkedin} target="_blank" rel="noopener" className="text-white underline uppercase text-xs font-bold tracking-widest">LinkedIn</a>

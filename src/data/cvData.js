@@ -4,7 +4,6 @@ export const cvData = {
     title: "Software Engineer",
     email: "jim.sebastian.lam@gmail.com",
     uniEmail: "jl03093@surrey.ac.uk",
-    phone: "+44 7754 525567",
     linkedin: "https://www.linkedin.com/in/jim-l-3154a0102/",
     github: "https://github.com/sebastianlam",
     alumni: "University of Surrey",
