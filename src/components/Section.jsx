@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const Section = ({ title, children, id }) => {
+const Section = ({ title, children, id, className = "" }) => {
   return (
     <motion.section 
       id={id}
@@ -9,9 +9,9 @@ const Section = ({ title, children, id }) => {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-10%" }}
       transition={{ duration: 0.8 }}
-      className="relative"
+      className={`relative ${className}`}
     >
-      <div className="flex items-center gap-4 mb-12 overflow-hidden">
+      <div className="flex items-center gap-4 mb-12 overflow-hidden repel-target">
         <h2 className="text-6xl md:text-8xl font-serif italic text-zinc-200 dark:text-zinc-800 uppercase select-none leading-none">
           {title}
         </h2>

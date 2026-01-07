@@ -212,9 +212,8 @@ const SkillsGraph2D = () => {
     
     let width, height;
     const resize = () => {
-      const rect = container.getBoundingClientRect();
-      width = rect.width || 800;
-      height = 700;
+      width = window.innerWidth;
+      height = window.innerHeight;
       
       canvas.width = width * dpr;
       canvas.height = height * dpr;
@@ -272,11 +271,14 @@ const SkillsGraph2D = () => {
     }));
 
     // --- Physics ---
-    const springK = 0.008;
-    const damping = 0.90;
-    const charge = 2800;
-    const centerK = 0.004;
+    const springK = 0.08;
+    const damping = 0.20;
+    const charge = 4500;
+    const centerK = 0.02;
     const maxVelocity = 6.0;
+    const domRepelK = 300;
+    const edgeRepelK = 1000;
+    const edgeMargin = 50;
 
     const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
     const viewSpringK = 0.006;
@@ -284,6 +286,41 @@ const SkillsGraph2D = () => {
 
     // --- Interaction ---
     let dragging = null;
+    let repelPoints = [];
+
+    const updateRepelPoints = () => {
+      // Find leaf elements with text content
+      const elements = document.querySelectorAll('.repel-target');
+      const points = [];
+      
+      elements.forEach(root => {
+        // Deep search for leaf elements with text
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+          acceptNode: (node) => {
+            // Only accept elements that have text and no element children
+            if (node.children.length === 0 && node.textContent.trim().length > 0) {
+              return NodeFilter.FILTER_ACCEPT;
+            }
+            return NodeFilter.FILTER_SKIP;
+          }
+        });
+
+        let node;
+        while (node = walker.nextNode()) {
+          const rect = node.getBoundingClientRect();
+          if (rect.bottom > -100 && rect.top < window.innerHeight + 100) {
+            points.push({
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+              w: rect.width,
+              h: rect.height
+            });
+          }
+        }
+      });
+      repelPoints = points;
+    };
+
     const getPointer = (e) => {
       const rect = canvas.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -301,31 +338,33 @@ const SkillsGraph2D = () => {
     };
 
     const onPointerDown = (e) => {
+      // Don't intercept if clicking an interactive element (link, button, etc)
+      if (e.target.closest('a, button, input, textarea')) return;
+
       const p = toWorld(getPointer(e));
       const n = hit(p.x, p.y);
       if (n && !n.isRoot) {
         dragging = n;
         n.fx = p.x; n.fy = p.y;
-        canvas.setPointerCapture(e.pointerId);
+        if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
       }
     };
     const onPointerMove = (e) => {
+      if (!dragging) return;
       const p = toWorld(getPointer(e));
-      if (dragging) {
-        dragging.fx = p.x; dragging.fy = p.y;
-      }
+      dragging.fx = p.x; dragging.fy = p.y;
     };
     const onPointerUp = (e) => {
       if (dragging) {
         dragging.fx = null; dragging.fy = null;
         dragging = null;
-        canvas.releasePointerCapture(e.pointerId);
+        if (canvas.releasePointerCapture) canvas.releasePointerCapture(e.pointerId);
       }
     };
 
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onPointerMove);
-    canvas.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
 
     const roundRect = (c, x, y, w, h, r) => {
       c.beginPath();
@@ -342,7 +381,15 @@ const SkillsGraph2D = () => {
     };
 
     let raf;
+    let lastRepelUpdate = 0;
     const animate = () => {
+      // Periodic update of DOM repel points to avoid expensive queries every frame
+      const now = performance.now();
+      if (now - lastRepelUpdate > 100) {
+        updateRepelPoints();
+        lastRepelUpdate = now;
+      }
+
       // Step Physics
       nodes_sim.forEach(n => { n.ax = 0; n.ay = 0; });
 
@@ -358,17 +405,67 @@ const SkillsGraph2D = () => {
       });
 
       for (let i = 0; i < nodes_sim.length; i++) {
+        const a = nodes_sim[i];
+        
+        // Node-Node Repulsion
         for (let j = i + 1; j < nodes_sim.length; j++) {
-          const a = nodes_sim[i], b = nodes_sim[j];
+          const b = nodes_sim[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist2 = Math.max(36, dx*dx + dy*dy);
-          const force = charge / dist2;
+          
+          // Reduce repulsion for the root (mother) node to prevent it from clearing the whole screen
+          let currentCharge = charge;
+          if (a.isRoot || b.isRoot) currentCharge = charge * 0.3;
+          
+          const force = currentCharge / dist2;
           const dist = Math.sqrt(dist2);
           const fx = force * (dx / dist);
           const fy = force * (dy / dist);
           a.ax -= fx; a.ay -= fy;
           b.ax += fx; b.ay += fy;
+        }
+
+        // DOM Element Repulsion
+        repelPoints.forEach(p => {
+          // Convert DOM screen space to simulation world space
+          const px = (p.x - view.x) / view.scale;
+          const py = (p.y - view.y) / view.scale;
+          const pw = p.w / view.scale;
+          const ph = p.h / view.scale;
+
+          const dx = a.x - px;
+          const dy = a.y - py;
+          const dist = Math.hypot(dx, dy) || 1;
+          
+          // Basic repulsion if inside or near the element's box
+          const minDist = Math.max(pw, ph) / 2 + 40;
+          if (dist < minDist) {
+            const force = (domRepelK * (1 - dist / minDist)) / dist;
+            a.ax += dx * force;
+            a.ay += dy * force;
+          }
+        });
+
+        // Edge Repulsion
+        // Convert node world pos to screen pos for edge check
+        const screenX = a.x * view.scale + view.x;
+        const screenY = a.y * view.scale + view.y;
+        
+        if (screenX < edgeMargin) {
+          const force = (edgeRepelK * (1 - screenX / edgeMargin)) / view.scale;
+          a.ax += force;
+        } else if (screenX > width - edgeMargin) {
+          const force = (edgeRepelK * (1 - (width - screenX) / edgeMargin)) / view.scale;
+          a.ax -= force;
+        }
+        
+        if (screenY < edgeMargin) {
+          const force = (edgeRepelK * (1 - screenY / edgeMargin)) / view.scale;
+          a.ay += force;
+        } else if (screenY > height - edgeMargin) {
+          const force = (edgeRepelK * (1 - (height - screenY) / edgeMargin)) / view.scale;
+          a.ay -= force;
         }
       }
 
@@ -415,7 +512,8 @@ const SkillsGraph2D = () => {
       // Draw Main Canvas
       const colors = getThemeColors();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
-      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = colors.bg;
+      ctx.fillRect(0, 0, width, height);
       
       ctx.save();
       ctx.translate(view.x, view.y);
@@ -467,8 +565,8 @@ const SkillsGraph2D = () => {
         gl.uniform2f(resLoc, offscreenCanvas.width, offscreenCanvas.height);
         
         const radLoc = gl.getUniformLocation(program, 'uRadius');
-        // Pulse radius slightly with energy
-        gl.uniform1f(radLoc, (60.0 + energy * 80.0) * dpr); 
+        // Pulse radius slightly with energy (reduced by factor of 2)
+        gl.uniform1f(radLoc, (30.0 + energy * 40.0) * dpr); 
         
         const energyLoc = gl.getUniformLocation(program, 'uEnergy');
         gl.uniform1f(energyLoc, energy);
@@ -490,15 +588,15 @@ const SkillsGraph2D = () => {
 
     return () => {
       window.removeEventListener('resize', resize);
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onPointerMove);
-      canvas.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
       cancelAnimationFrame(raf);
     };
   }, [theme]);
 
   return (
-    <div ref={containerRef} className="h-[700px] w-full border-y-2 border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-900/50 overflow-hidden relative touch-none">
+    <div ref={containerRef} className="fixed inset-0 w-full h-full -z-10 bg-white dark:bg-zinc-950 overflow-hidden pointer-events-auto">
       <canvas ref={canvasRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
     </div>
   );

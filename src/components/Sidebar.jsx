@@ -35,14 +35,7 @@ const Sidebar = () => {
 
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-30 mb-4">Controls</p>
-          <div className="grid grid-cols-4 gap-2">
-            <button 
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
-              title="Toggle Theme"
-            >
-              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
+          <div className="grid grid-cols-3 gap-2">
             <button 
               onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
               className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
@@ -65,13 +58,6 @@ const Sidebar = () => {
               {isReading ? <VolumeX size={14} /> : <Volume2 size={14} />}
             </button>
           </div>
-          <button 
-            onClick={() => setTheme('hc')}
-            className="w-full py-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors font-bold text-[10px] uppercase tracking-widest"
-            title="High Contrast"
-          >
-            High Contrast Mode
-          </button>
         </div>
       </div>
 
