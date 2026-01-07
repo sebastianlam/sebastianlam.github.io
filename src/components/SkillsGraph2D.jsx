@@ -317,9 +317,9 @@ const SkillsGraph2D = () => {
         initY = rootFixed.y;
       } else {
         const angle = (n.baseHue * Math.PI) / 180;
-        const distance = n.depth === 1 ? 350 : n.depth * 180;
+        const distance = n.depth === 1 ? 300 : n.depth * 180;
         const jitter = 10;
-        const flatteningFactor = 0.4; // Squash vertically
+        const flatteningFactor = 0.6; // Less squashed since root is larger
         initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * jitter;
         initY = rootFixed.y + Math.sin(angle) * distance * flatteningFactor + (Math.random() - 0.5) * jitter;
       }
@@ -346,7 +346,7 @@ const SkillsGraph2D = () => {
     const links_sim = layout.links.map(l => ({
       source: nodes_sim[layout.nodes.indexOf(l.source)],
       target: nodes_sim[layout.nodes.indexOf(l.target)],
-      rest: (l.source.depth === 0 ? 250 : 120) + l.source.depth * 40
+      rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40
     }));
 
     // --- Physics ---
@@ -652,11 +652,15 @@ const SkillsGraph2D = () => {
           
           let currentCharge = charge;
 
-          // 1. Very strong repulsion between skill categories (Level 1)
-          if (a.depth === 1 && b.depth === 1) {
+          // 1. Massive repulsion for the root node (Level 0)
+          if (a.depth === 0 || b.depth === 0) {
+            currentCharge = charge * 30.0; 
+          }
+          // 2. Very strong repulsion between skill categories (Level 1)
+          else if (a.depth === 1 && b.depth === 1) {
             currentCharge = charge * 12.0; 
           }
-          // 2. Attraction between sibling nodes (Level 2+) with a minimum distance
+          // 3. Attraction between sibling nodes (Level 2+) with a minimum distance
           else if (a.depth >= 2 && b.depth >= 2 && a.parent === b.parent) {
             // Use a spring-like force with a rest length to ensure readability
             const restLength = a.depth === 2 ? 100 : 60; 
