@@ -10,6 +10,13 @@
   --font-serif: "Playfair Display", Georgia, serif;
 }
 
+html, body {
+  background-color: #09090b;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
 /* Base styles for the "Big Type" look */
 h1, h2, h3 {
   @apply font-serif italic tracking-tighter;

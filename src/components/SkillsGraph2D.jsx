@@ -15,6 +15,14 @@ const SkillsGraph2D = () => {
     buffer: null,
     offscreenCanvas: null,
     offscreenCtx: null,
+    samples: 16, // Current dynamic samples
+  });
+
+  const perfState = useRef({
+    fps: 60,
+    lastTime: performance.now(),
+    frameCount: 0,
+    lastAdjustment: performance.now()
   });
 
   const getThemeColors = () => {
@@ -86,7 +94,7 @@ const SkillsGraph2D = () => {
     
     // --- WebGL Initialization ---
     const initWebGL = () => {
-      const gl = canvas.getContext('webgl', { antialias: false, alpha: false });
+      const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
       if (!gl) return null;
 
       const vsSource = `
@@ -107,6 +115,7 @@ const SkillsGraph2D = () => {
         uniform float uRadius;
         uniform float uEnergy;
         uniform float uTime;
+        uniform int uSamples;
 
         float random(vec2 uv) {
           return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
@@ -128,24 +137,26 @@ const SkillsGraph2D = () => {
           float total = 0.0;
           
           // Poisson Disk-style sampling for true optical Gaussian feel
-          const int SAMPLES = 40;
           float goldenAngle = 2.39996; // Golden angle in radians
+          float jitter = random(vUv) * 6.28;
           
-          for (int i = 0; i < SAMPLES; i++) {
-            float r = sqrt(float(i) / float(SAMPLES)) * blurAmount;
-            float theta = float(i) * goldenAngle + random(vUv) * 6.28;
+          // WebGL 1.0 requires constant loop limit, so we use a max and break
+          for (int i = 0; i < 32; i++) {
+            if (i >= uSamples) break;
+            
+            float r = sqrt(float(i) / float(uSamples)) * blurAmount;
+            float theta = float(i) * goldenAngle + jitter;
             vec2 offset = vec2(cos(theta), sin(theta)) * r / uResolution;
             
-            // Dynamic Chromatic Aberration linked to energy and blur amount
-            float aberration = 1.0 + (uEnergy * 0.15 * (blurAmount / uRadius));
-            
-            vec4 s;
-            s.r = texture2D(uTexture, vUv + offset * aberration).r;
-            s.g = texture2D(uTexture, vUv + offset).g;
-            s.b = texture2D(uTexture, vUv + offset / aberration).b;
-            s.a = 1.0;
-
-            color += s;
+            // Optimization: Only apply chromatic aberration to every other sample
+            if (mod(float(i), 2.0) < 1.0) {
+              float aberration = 1.0 + (uEnergy * 0.15 * (blurAmount / uRadius));
+              color.r += texture2D(uTexture, vUv + offset * aberration).r;
+              color.g += texture2D(uTexture, vUv + offset).g;
+              color.b += texture2D(uTexture, vUv + offset / aberration).b;
+            } else {
+              color += texture2D(uTexture, vUv + offset);
+            }
             total += 1.0;
           }
           
@@ -209,6 +220,7 @@ const SkillsGraph2D = () => {
 
     const ctx = glState.current.offscreenCtx || canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
+    ctx.imageSmoothingQuality = 'high';
     
     let width, height;
     const resize = () => {
@@ -223,6 +235,16 @@ const SkillsGraph2D = () => {
       if (glState.current.offscreenCanvas) {
         glState.current.offscreenCanvas.width = width * dpr;
         glState.current.offscreenCanvas.height = height * dpr;
+        
+        // Ensure texture is resized on GPU
+        if (glState.current.gl) {
+          const { gl, texture } = glState.current;
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
+            glState.current.offscreenCanvas.width, 
+            glState.current.offscreenCanvas.height, 
+            0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        }
       }
 
       if (glState.current.gl) {
@@ -346,19 +368,19 @@ const SkillsGraph2D = () => {
       if (n && !n.isRoot) {
         dragging = n;
         n.fx = p.x; n.fy = p.y;
-        if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
       }
     };
     const onPointerMove = (e) => {
       if (!dragging) return;
       const p = toWorld(getPointer(e));
       dragging.fx = p.x; dragging.fy = p.y;
+      // Prevent scrolling when dragging a node
+      if (e.cancelable) e.preventDefault();
     };
     const onPointerUp = (e) => {
       if (dragging) {
         dragging.fx = null; dragging.fy = null;
         dragging = null;
-        if (canvas.releasePointerCapture) canvas.releasePointerCapture(e.pointerId);
       }
     };
 
@@ -383,9 +405,30 @@ const SkillsGraph2D = () => {
     let raf;
     let lastRepelUpdate = 0;
     const animate = () => {
-      // Periodic update of DOM repel points to avoid expensive queries every frame
       const now = performance.now();
-      if (now - lastRepelUpdate > 100) {
+
+      // --- Performance Tracking & Dynamic Quality ---
+      perfState.current.frameCount++;
+      const timeSinceLastFPS = now - perfState.current.lastTime;
+      if (timeSinceLastFPS >= 1000) {
+        perfState.current.fps = (perfState.current.frameCount * 1000) / timeSinceLastFPS;
+        perfState.current.frameCount = 0;
+        perfState.current.lastTime = now;
+
+        // Adjust samples every second based on FPS
+        if (now - perfState.current.lastAdjustment > 2000) {
+          if (perfState.current.fps < 45 && glState.current.samples > 8) {
+            glState.current.samples = Math.max(8, glState.current.samples - 4);
+            perfState.current.lastAdjustment = now;
+          } else if (perfState.current.fps > 58 && glState.current.samples < 32) {
+            glState.current.samples = Math.min(32, glState.current.samples + 2);
+            perfState.current.lastAdjustment = now;
+          }
+        }
+      }
+
+      // Periodic update of DOM repel points - increased interval to 250ms for performance
+      if (now - lastRepelUpdate > 250) {
         updateRepelPoints();
         lastRepelUpdate = now;
       }
@@ -512,8 +555,7 @@ const SkillsGraph2D = () => {
       // Draw Main Canvas
       const colors = getThemeColors();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
-      ctx.fillStyle = colors.bg;
-      ctx.fillRect(0, 0, width, height);
+      ctx.clearRect(0, 0, width, height);
       
       ctx.save();
       ctx.translate(view.x, view.y);
@@ -521,13 +563,15 @@ const SkillsGraph2D = () => {
 
       // Links
       ctx.strokeStyle = colors.border;
-      ctx.lineWidth = 1 / view.scale;
+      ctx.lineWidth = 1.5 / view.scale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
       links_sim.forEach(l => {
-        ctx.beginPath();
         ctx.moveTo(l.source.x, l.source.y);
         ctx.lineTo(l.target.x, l.target.y);
-        ctx.stroke();
       });
+      ctx.stroke();
 
       // Nodes
       nodes_sim.forEach(n => {
@@ -556,9 +600,9 @@ const SkillsGraph2D = () => {
         
         gl.useProgram(program);
         
-        // Upload 2D canvas to texture
+        // Upload 2D canvas to texture using faster texSubImage2D
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreenCanvas);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, offscreenCanvas);
         
         // Set uniforms
         const resLoc = gl.getUniformLocation(program, 'uResolution');
@@ -573,6 +617,9 @@ const SkillsGraph2D = () => {
         
         const timeLoc = gl.getUniformLocation(program, 'uTime');
         gl.uniform1f(timeLoc, performance.now() / 1000.0);
+        
+        const samplesLoc = gl.getUniformLocation(program, 'uSamples');
+        gl.uniform1i(samplesLoc, glState.current.samples);
         
         const posLoc = gl.getAttribLocation(program, 'position');
         gl.enableVertexAttribArray(posLoc);
@@ -596,8 +643,8 @@ const SkillsGraph2D = () => {
   }, [theme]);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 w-full h-full -z-10 bg-white dark:bg-zinc-950 overflow-hidden pointer-events-auto">
-      <canvas ref={canvasRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
+    <div ref={containerRef} className="fixed inset-0 w-full h-full z-0 bg-[#09090b] overflow-hidden pointer-events-none">
+      <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" style={{ touchAction: 'none' }} />
     </div>
   );
 };

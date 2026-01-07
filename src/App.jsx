@@ -16,15 +16,15 @@ function App() {
         <SkillsGraph />
       </Suspense>
       
-      <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10 pointer-events-none">
-        {!focusMode && <div className="pointer-events-auto"><Sidebar /></div>}
+      <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
+        {!focusMode && <Sidebar />}
         
-        <main className={`flex-1 px-6 md:px-12 py-12 ${density === 'compact' ? 'space-y-12' : 'space-y-32'} transition-all pointer-events-none`}>
-          <Section title="Skills" id="skills" className="pointer-events-none">
+        <main className={`flex-1 px-6 md:px-12 py-12 ${density === 'compact' ? 'space-y-12' : 'space-y-32'} transition-all`}>
+          <Section title="Skills" id="skills">
             <div className="h-[400px]" /> {/* Spacer where the graph used to be */}
           </Section>
 
-          <Section title="Experience" id="experience" className="pointer-events-auto">
+          <Section title="Experience" id="experience">
             <div className="space-y-12">
               {cvData.experience.map((exp, i) => (
                 <div key={i} className="group relative repel-target">
@@ -52,7 +52,7 @@ function App() {
             </div>
           </Section>
 
-          <Section title="Projects" id="projects" className="pointer-events-auto">
+          <Section title="Projects" id="projects">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {cvData.projects.map((proj, i) => (
                 <motion.div 
