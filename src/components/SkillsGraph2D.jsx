@@ -153,7 +153,17 @@ const SkillsGraph2D = () => {
           float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
           
           if (blurAmount < 0.2) {
-            gl_FragColor = texture2D(uTexture, vUv);
+            // 4x MSAA (Rotated Grid Supersampling) for smooth 2D rendering
+            vec2 texelSize = 1.0 / uResolution;
+            vec4 color = vec4(0.0);
+            
+            // RGSS Pattern
+            color += texture2D(uTexture, vUv + vec2(-0.125, -0.375) * texelSize);
+            color += texture2D(uTexture, vUv + vec2(0.375, -0.125) * texelSize);
+            color += texture2D(uTexture, vUv + vec2(-0.375, 0.125) * texelSize);
+            color += texture2D(uTexture, vUv + vec2(0.125, 0.375) * texelSize);
+            
+            gl_FragColor = color * 0.25;
             return;
           }
 
@@ -292,13 +302,28 @@ const SkillsGraph2D = () => {
     const nodes_sim = layout.nodes.map(n => {
       const label = n.node.name;
       const w = measureLabelWidth(label);
+
+      // Radial Seeding: Distribute nodes by group (baseHue) and depth
+      let initX, initY;
+      if (n.depth === 0) {
+        initX = rootFixed.x;
+        initY = rootFixed.y;
+      } else {
+        const angle = (n.baseHue * Math.PI) / 180;
+        const distance = n.depth * 180;
+        const jitter = 10;
+        const flatteningFactor = 0.4; // Squash vertically
+        initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * jitter;
+        initY = rootFixed.y + Math.sin(angle) * distance * flatteningFactor + (Math.random() - 0.5) * jitter;
+      }
+
       return {
         name: label,
         depth: n.depth,
         parent: n.parent, // Store parent reference for hierarchy forces
         baseHue: n.baseHue, // Store base hue for psychedelic effects
-        x: rootFixed.x + (Math.random() - 0.5) * 50,
-        y: rootFixed.y + (Math.random() - 0.5) * 50,
+        x: initX,
+        y: initY,
         vx: 0,
         vy: 0,
         ax: 0,
@@ -693,7 +718,8 @@ const SkillsGraph2D = () => {
       const cx = (width + sidebarWidth) / 2, cy = height / 2;
       nodes_sim.forEach((n, i) => {
         n.ax += (cx - n.x) * centerK;
-        n.ay += (cy - n.y) * centerK;
+        // Apply stronger centering on Y to keep the layout flat
+        n.ay += (cy - n.y) * (centerK * 4.0);
         if (n.fx !== null) { n.x = n.fx; n.vx = 0; }
         if (n.fy !== null) { n.y = n.fy; n.vy = 0; }
         n.vx = (n.vx + n.ax) * damping;
@@ -714,9 +740,10 @@ const SkillsGraph2D = () => {
         maxY = Math.max(maxY, n.y + n.height/2);
       });
       const margin = 100;
+      const vMargin = 250; // Larger vertical margin to discourage vertical expansion
       const worldW = maxX - minX || 100;
       const worldH = maxY - minY || 100;
-      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - sidebarWidth - margin*2) / worldW, (height - margin*2) / worldH)));
+      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - sidebarWidth - margin*2) / worldW, (height - vMargin*2) / worldH)));
       const targetX = (width + sidebarWidth) / 2 - targetScale * (minX + maxX) / 2;
       const targetY = height / 2 - targetScale * (minY + maxY) / 2;
 
@@ -740,7 +767,6 @@ const SkillsGraph2D = () => {
       ctx.scale(view.scale, view.scale);
 
       // Links
-      ctx.lineWidth = 1.5 / view.scale;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       links_sim.forEach((l, idx) => {
@@ -748,10 +774,37 @@ const SkillsGraph2D = () => {
         const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4));
         const lsdColor = getLSDColor(idx, now, velFactor, l.target.depth, l.target.baseHue);
         
-        ctx.strokeStyle = lsdColor.replace(')', ', 0.3)').replace('rgb', 'rgba'); // Make links semi-transparent LSD
+        // Helper to safely set alpha on both rgb and rgba strings
+        const setAlpha = (color, alpha) => {
+          if (color.startsWith('rgba')) {
+            return color.replace(/,[\s\d.]+\)$/, `, ${alpha})`);
+          }
+          return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+        };
+        
+        // Calculate organic curve control point (pull towards center)
+        const midX = (l.source.x + l.target.x) / 2;
+        const midY = (l.source.y + l.target.y) / 2;
+        const pull = 0.15; // How much to pull toward center
+        const cpX = midX + (cx - midX) * pull;
+        const cpY = midY + (cy - midY) * pull;
+
+        // Hierarchical width
+        const baseWidth = l.source.depth === 0 ? 3.0 : (l.source.depth === 1 ? 1.5 : 0.8);
+        const scaleAdjustedWidth = baseWidth / view.scale;
+
         ctx.beginPath();
         ctx.moveTo(l.source.x, l.source.y);
-        ctx.lineTo(l.target.x, l.target.y);
+        ctx.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
+
+        // Pass 1: The "Aura" (Soft anti-aliasing glow)
+        ctx.strokeStyle = setAlpha(lsdColor, 0.15);
+        ctx.lineWidth = scaleAdjustedWidth * 4;
+        ctx.stroke();
+
+        // Pass 2: The "Core" (Sharp connection)
+        ctx.strokeStyle = setAlpha(lsdColor, 0.5);
+        ctx.lineWidth = scaleAdjustedWidth;
         ctx.stroke();
       });
 
@@ -759,26 +812,29 @@ const SkillsGraph2D = () => {
       nodes_sim.forEach((n, idx) => {
         // Velocity-dependent color shift
         const vel = Math.hypot(n.vx, n.vy);
-        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4)); // More sensitive to movement
+        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4));
         
-        const textColor = getLSDColor(idx, now, velFactor, n.depth, n.baseHue);
+        const nodeColor = getLSDColor(idx, now, velFactor, n.depth, n.baseHue);
         
-        // Add a subtle glow for fast nodes on the text
+        // Draw Nucleus
+        ctx.fillStyle = nodeColor;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 2.5 / view.scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Add glow for active/fast nodes
         if (velFactor > 0.2) {
-          ctx.shadowBlur = 20 * velFactor;
-          ctx.shadowColor = textColor;
-        } else {
-          ctx.shadowBlur = 0;
+          ctx.shadowBlur = 15 * velFactor;
+          ctx.shadowColor = nodeColor;
         }
-        
-        ctx.fillStyle = textColor;
+
+        // Label Presentation (Offset above nucleus)
         const fontSize = window.innerWidth < 768 ? 16 : 12;
         ctx.font = `bold ${fontSize}px "Inter"`;
         ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(n.name, n.x, n.y);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(n.name, n.x, n.y - (10 / view.scale));
         
-        // Reset shadow for next nodes
         ctx.shadowBlur = 0;
       });
       ctx.restore();
