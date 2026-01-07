@@ -14,11 +14,11 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-full md:w-80 md:sticky md:top-0 h-auto md:h-screen p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-900 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
+    <aside className="w-full md:w-80 md:sticky md:top-0 h-auto md:h-screen p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
       <div>
         <header className="mb-12">
-          <h1 className="text-4xl font-serif italic mb-2 tracking-tighter uppercase">{cvData.personal.name}</h1>
-          <p className="text-xs font-mono tracking-widest uppercase opacity-50">{cvData.personal.title}</p>
+          <h1 className="text-4xl font-serif italic mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
+          <p className="text-xs font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
         </header>
 
         <nav className="space-y-4 mb-12">
@@ -26,7 +26,7 @@ const Sidebar = () => {
             <a 
               key={item} 
               href={`#${item.toLowerCase()}`}
-              className="block text-sm font-bold uppercase tracking-widest hover:italic transition-all"
+              className="block text-sm font-bold uppercase tracking-widest hover:italic transition-all text-white hover:text-white"
             >
               {item}
             </a>
@@ -34,11 +34,11 @@ const Sidebar = () => {
         </nav>
 
         <div className="space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-30 mb-4">Controls</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mb-4">Controls</p>
           <div className="grid grid-cols-3 gap-2">
             <button 
               onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
-              className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white"
               title="Toggle Density"
               aria-label="Toggle content density"
             >
@@ -46,7 +46,7 @@ const Sidebar = () => {
             </button>
             <button 
               onClick={() => setFocusMode(true)}
-              className="p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white"
               title="Focus Mode"
               aria-label="Enter focus mode"
             >
@@ -54,7 +54,7 @@ const Sidebar = () => {
             </button>
             <button 
               onClick={handleReadAloud}
-              className={`p-2 border border-zinc-100 dark:border-zinc-900 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors ${isReading ? 'bg-zinc-900 text-white dark:bg-white dark:text-black' : ''}`}
+              className={`p-2 border border-white/20 hover:bg-white hover:text-black transition-colors ${isReading ? 'bg-white text-black' : 'text-white'}`}
               title="Read Aloud"
               aria-label={isReading ? "Stop reading aloud" : "Read page content aloud"}
             >
@@ -67,11 +67,11 @@ const Sidebar = () => {
 
       <footer className="pt-8">
         <div className="flex gap-4 mb-4">
-          <a href={cvData.personal.github} target="_blank" rel="noopener" aria-label="GitHub Profile"><Github size={18} className="opacity-50 hover:opacity-100" /></a>
-          <a href={cvData.personal.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn Profile"><Linkedin size={18} className="opacity-50 hover:opacity-100" /></a>
-          <a href={`mailto:${cvData.personal.email}`} aria-label="Send Email"><Mail size={18} className="opacity-50 hover:opacity-100" /></a>
+          <a href={cvData.personal.github} target="_blank" rel="noopener" aria-label="GitHub Profile"><Github size={18} className="text-white hover:text-white transition-colors" /></a>
+          <a href={cvData.personal.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn Profile"><Linkedin size={18} className="text-white hover:text-white transition-colors" /></a>
+          <a href={`mailto:${cvData.personal.email}`} aria-label="Send Email"><Mail size={18} className="text-white hover:text-white transition-colors" /></a>
         </div>
-        <p className="text-[10px] font-mono opacity-30">© 2026 {cvData.personal.name}</p>
+        <p className="text-[10px] font-mono text-white">© 2026 {cvData.personal.name}</p>
       </footer>
     </aside>
   );

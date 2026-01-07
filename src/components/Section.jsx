@@ -12,10 +12,10 @@ const Section = ({ title, children, id, className = "" }) => {
       className={`relative ${className}`}
     >
       <div className="flex items-center gap-4 mb-12 overflow-hidden repel-target">
-        <h2 className="text-6xl md:text-8xl font-serif italic text-zinc-200 dark:text-zinc-800 uppercase select-none leading-none">
+        <h2 className="text-6xl md:text-8xl font-serif italic text-white uppercase select-none leading-none">
           {title}
         </h2>
-        <div className="h-[2px] flex-1 bg-zinc-100 dark:bg-zinc-900" />
+        <div className="h-[2px] flex-1 bg-white" />
       </div>
       <div className="relative z-10">
         {children}

@@ -140,7 +140,8 @@ export const cvData = {
   projects: [
     {
       title: "Lidl Spending Dashboard",
-      status: "Ongoing",
+      status: "Currently Offline",
+      isBroken: true,
       tags: ["dashboard", "data-visualisation", "python", "forecasting", "anomaly-detection", "treemap"],
       description: "Interactive personal finance dashboard covering 25 months of supermarket receipts with category treemaps, monthly spend trends, anomaly detection, and short-term forecasts.",
       link: "http://193.123.178.35/dashboard"

@@ -6,12 +6,13 @@
 }
 
 :root {
-  --font-sans: Inter, system-ui, -apple-system, sans-serif;
-  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "IBM Plex Mono", monospace;
+  --font-serif: "Fraunces", serif;
 }
 
 html, body {
-  background-color: #09090b;
+  background-color: #050505;
+  color: #ffffff;
   margin: 0;
   padding: 0;
   min-height: 100%;
@@ -54,6 +55,7 @@ html, body {
 /* Base styles for the "Big Type" look */
 h1, h2, h3 {
   @apply font-serif italic tracking-tighter;
+  font-variation-settings: "SOFT" 0, "WONK" 1;
 }
 
 section {

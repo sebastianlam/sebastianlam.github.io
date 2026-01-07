@@ -26,13 +26,12 @@ const SkillsGraph2D = () => {
   });
 
   const getThemeColors = () => {
-    const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     return {
-      border: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-      text: isDark ? '#f4f4f5' : '#18181b',
-      bg: isDark ? '#09090b' : '#ffffff',
-      primary: isDark ? '#f4f4f5' : '#18181b',
-      accent: isDark ? '#3b82f6' : '#2563eb',
+      border: 'rgba(134, 239, 172, 0.15)',
+      text: '#ffffff',
+      bg: '#050505',
+      primary: '#ffffff',
+      accent: '#bef264',
     };
   };
 
@@ -45,12 +44,24 @@ const SkillsGraph2D = () => {
       const root = { name: 'Skills', children: [] };
       const categories = {};
       
+      // Get unique category names to calculate equidistant hues
+      const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
+      
       cvData.skills.forEach(skill => {
         if (!categories[skill.category]) {
-          categories[skill.category] = { name: skill.category, children: [] };
+          const catIndex = uniqueCats.indexOf(skill.category);
+          const baseHue = (catIndex / uniqueCats.length) * 360;
+          categories[skill.category] = { 
+            name: skill.category, 
+            children: [],
+            baseHue: baseHue
+          };
           root.children.push(categories[skill.category]);
         }
-        categories[skill.category].children.push({ name: skill.name });
+        categories[skill.category].children.push({ 
+          name: skill.name,
+          baseHue: categories[skill.category].baseHue
+        });
       });
       
       return root;
@@ -66,7 +77,14 @@ const SkillsGraph2D = () => {
       const depthToLeaves = new Map();
 
       function walk(node, depth, parent) {
-        const current = { node, depth, x: 0, y: depth * nodeSizeY, parent: null };
+        const current = { 
+          node, 
+          depth, 
+          x: 0, 
+          y: depth * nodeSizeY, 
+          parent: null,
+          baseHue: node.baseHue || 0 
+        };
         if (parent) current.parent = parent;
         if (!node.children || node.children.length === 0) {
           const idx = (depthToLeaves.get(depth) || 0);
@@ -258,20 +276,19 @@ const SkillsGraph2D = () => {
     ctx.font = baseFont;
 
     const measureLabelWidth = (label) => {
-      const padding = 24;
       const w = Math.ceil(ctx.measureText(label).width);
-      return Math.max(80, Math.min(200, w + padding));
+      return w + 10;
     };
 
     const rootFixed = { x: width / 2, y: height / 2 };
     const nodes_sim = layout.nodes.map(n => {
-      const isRoot = n.depth === 0;
-      const label = isRoot ? n.node.name.toUpperCase() : n.node.name;
+      const label = n.node.name;
       const w = measureLabelWidth(label);
       return {
         name: label,
         depth: n.depth,
-        isRoot,
+        parent: n.parent, // Store parent reference for hierarchy forces
+        baseHue: n.baseHue, // Store base hue for psychedelic effects
         x: rootFixed.x + (Math.random() - 0.5) * 50,
         y: rootFixed.y + (Math.random() - 0.5) * 50,
         vx: 0,
@@ -279,26 +296,26 @@ const SkillsGraph2D = () => {
         ax: 0,
         ay: 0,
         width: w,
-        height: isRoot ? 36 : 32,
-        fx: isRoot ? rootFixed.x : null,
-        fy: isRoot ? rootFixed.y : null,
-        color: n.depth === 1 ? '#3b82f6' : (n.depth === 2 ? '#10b981' : null)
+        height: 16,
+        fx: null,
+        fy: null,
+        color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : '#ffffff')
       };
     });
 
     const links_sim = layout.links.map(l => ({
       source: nodes_sim[layout.nodes.indexOf(l.source)],
       target: nodes_sim[layout.nodes.indexOf(l.target)],
-      rest: 180 + l.source.depth * 50
+      rest: 120 + l.source.depth * 40
     }));
 
     // --- Physics ---
     const springK = 0.08;
-    const damping = 0.20;
+    const damping = 0.05;
     const charge = 4500;
     const centerK = 0.02;
     const maxVelocity = 6.0;
-    const domRepelK = 300;
+    const domRepelK = 80;
     const edgeRepelK = 1000;
     const edgeMargin = 50;
 
@@ -309,21 +326,22 @@ const SkillsGraph2D = () => {
     // --- Interaction ---
     let dragging = null;
     let repelPoints = [];
-    let cachedRepelElements = [];
+    let cachedTextNodes = [];
     let lastRepelCacheUpdate = 0;
+    const range = document.createRange();
 
     const updateRepelPoints = (forceRefreshCache = false) => {
       const now = performance.now();
       
-      // Refresh the list of leaf elements every 2 seconds or if forced
-      if (forceRefreshCache || now - lastRepelCacheUpdate > 2000 || cachedRepelElements.length === 0) {
+      // Refresh the list of text nodes every 2 seconds or if forced
+      if (forceRefreshCache || now - lastRepelCacheUpdate > 2000 || cachedTextNodes.length === 0) {
         const roots = document.querySelectorAll('.repel-target');
-        const leafElements = [];
+        const textNodes = [];
         
         roots.forEach(root => {
-          const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
             acceptNode: (node) => {
-              if (node.children.length === 0 && node.textContent.trim().length > 0) {
+              if (node.textContent.trim().length > 0) {
                 return NodeFilter.FILTER_ACCEPT;
               }
               return NodeFilter.FILTER_SKIP;
@@ -332,31 +350,45 @@ const SkillsGraph2D = () => {
 
           let node;
           while (node = walker.nextNode()) {
-            leafElements.push(node);
+            textNodes.push(node);
           }
         });
-        cachedRepelElements = leafElements;
+        cachedTextNodes = textNodes;
         lastRepelCacheUpdate = now;
       }
 
-      // Update rects for all cached leaf elements every frame
+      // Update rects for all characters in cached text nodes every frame
       const points = [];
       const vh = window.innerHeight;
+      const vw = window.innerWidth;
       
-      for (let i = 0; i < cachedRepelElements.length; i++) {
-        const el = cachedRepelElements[i];
-        // Check if element is still in DOM
-        if (!el.isConnected) continue;
+      for (let i = 0; i < cachedTextNodes.length; i++) {
+        const node = cachedTextNodes[i];
+        if (!node.isConnected) continue;
         
-        const rect = el.getBoundingClientRect();
-        // Only add points that are near the viewport
-        if (rect.bottom > -100 && rect.top < vh + 100) {
-          points.push({
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
-            w: rect.width,
-            h: rect.height
-          });
+        // Quick check if the parent element is roughly in view before processing characters
+        const parentRect = node.parentElement.getBoundingClientRect();
+        if (parentRect.bottom < -50 || parentRect.top > vh + 50 || parentRect.right < -50 || parentRect.left > vw + 50) {
+          continue;
+        }
+
+        const text = node.textContent;
+        for (let j = 0; j < text.length; j++) {
+          // Skip whitespace
+          if (text[j] === ' ' || text[j] === '\n' || text[j] === '\r' || text[j] === '\t') continue;
+          
+          range.setStart(node, j);
+          range.setEnd(node, j + 1);
+          const rect = range.getBoundingClientRect();
+          
+          if (rect.bottom > -20 && rect.top < vh + 20) {
+            points.push({
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+              w: rect.width,
+              h: rect.height
+            });
+          }
         }
       }
       repelPoints = points;
@@ -370,6 +402,47 @@ const SkillsGraph2D = () => {
       x: (p.x - view.x) / view.scale,
       y: (p.y - view.y) / view.scale
     });
+
+    const lerpColor = (color1, color2, factor) => {
+      const parse = (c) => {
+        if (c.startsWith('#')) {
+          const hex = parseInt(c.replace('#', ''), 16);
+          return [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff, 1.0];
+        }
+        if (c.startsWith('hsl')) {
+          // Simple approximation for HSL to RGB if needed, but we'll try to stick to RGB/RGBA for lerping
+          const m = c.match(/hsla?\((\d+),\s*([\d.]+)%,\s*([\d.]+)%(?:,\s*([\d.]+))?\)/);
+          if (m) {
+            const h = parseInt(m[1]) / 360, s = parseInt(m[2]) / 100, l = parseInt(m[3]) / 100;
+            let r, g, b;
+            if (s === 0) r = g = b = l;
+            else {
+              const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1; if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+              };
+              const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+              const p = 2 * l - q;
+              r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), m[4] ? parseFloat(m[4]) : 1.0];
+          }
+        }
+        const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3]), m[4] ? parseFloat(m[4]) : 1.0] : [255, 255, 255, 1.0];
+      };
+      const [r1, g1, b1, a1] = parse(color1);
+      const [r2, g2, b2, a2] = parse(color2);
+      const r = Math.round(r1 + (r2 - r1) * factor);
+      const g = Math.round(g1 + (g2 - g1) * factor);
+      const b = Math.round(b1 + (b2 - b1) * factor);
+      const a = a1 + (a2 - a1) * factor;
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    };
+
     const hit = (x, y) => {
       for (let i = nodes_sim.length - 1; i >= 0; i--) {
         const n = nodes_sim[i];
@@ -384,7 +457,7 @@ const SkillsGraph2D = () => {
 
       const p = toWorld(getPointer(e));
       const n = hit(p.x, p.y);
-      if (n && !n.isRoot) {
+      if (n) {
         dragging = n;
         n.fx = p.x; n.fy = p.y;
       }
@@ -428,6 +501,52 @@ const SkillsGraph2D = () => {
       isPaused = document.hidden;
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const getLSDColor = (index, time, velFactor, depth = 1, baseHue = 0) => {
+      // Different depths shift at different speeds and offsets
+      let hue;
+      if (depth === 0) {
+        // Root stays white-ish rainbow
+        hue = (time * 0.05 + index * 15) % 360;
+      } else if (depth === 1) {
+        // Categories have a static equidistant hue
+        hue = baseHue;
+      } else {
+        // Skill items (depth 2) shift within range of parent node (+/- 30 degrees)
+        const range = 30;
+        const shift = Math.sin(time * 0.001 + index) * range;
+        hue = (baseHue + shift + 360) % 360;
+      }
+      
+      // Hierarchy based on depth:
+      // Depth 0 (Root): High lightness, low saturation (Ethereal White-ish Rainbow)
+      // Depth 1 (Category): High saturation, mid lightness (Vibrant Punchy)
+      // Depth 2 (Skill): Mid saturation, lower lightness (Deep Detailed)
+      let s = 0.8, l = 0.6;
+      if (depth === 0) { s = 0.3; l = 0.9; }
+      else if (depth === 1) { s = 0.9; l = 0.6; }
+      else if (depth === 2) { s = 0.6; l = 0.5; }
+
+      // Convert HSL to RGB for lerpColor
+      const h = hue / 360;
+      let r, g, b;
+      if (s === 0) r = g = b = l;
+      else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1; if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
+      }
+      const baseColor = `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+      const fastRed = '#ef4444';
+      return velFactor > 0.05 ? lerpColor(baseColor, fastRed, velFactor) : baseColor;
+    };
 
     const animate = () => {
       if (isPaused) {
@@ -476,19 +595,34 @@ const SkillsGraph2D = () => {
       for (let i = 0; i < nodes_sim.length; i++) {
         const a = nodes_sim[i];
         
-        // Node-Node Repulsion
+        // Node-Node Repulsion & Hierarchy-specific forces
         for (let j = i + 1; j < nodes_sim.length; j++) {
           const b = nodes_sim[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist2 = Math.max(36, dx*dx + dy*dy);
+          const dist = Math.sqrt(dist2);
           
-          // Reduce repulsion for the root (mother) node to prevent it from clearing the whole screen
           let currentCharge = charge;
-          if (a.isRoot || b.isRoot) currentCharge = charge * 0.3;
+
+          // 1. Very strong repulsion between skill categories (Level 1)
+          if (a.depth === 1 && b.depth === 1) {
+            currentCharge = charge * 12.0; 
+          }
+          // 2. Attraction between skill items (Level 2) of the same category with a minimum distance
+          else if (a.depth === 2 && b.depth === 2 && a.parent === b.parent) {
+            // Use a spring-like force with a rest length to ensure readability
+            const restLength = 60; 
+            const k = 0.1; 
+            const force = k * (dist - restLength);
+            const fx = force * (dx / dist);
+            const fy = force * (dy / dist);
+            a.ax += fx; a.ay += fy;
+            b.ax -= fx; b.ay -= fy;
+            continue; // Skip the standard repulsion logic
+          }
           
           const force = currentCharge / dist2;
-          const dist = Math.sqrt(dist2);
           const fx = force * (dx / dist);
           const fy = force * (dy / dist);
           a.ax -= fx; a.ay -= fy;
@@ -496,20 +630,25 @@ const SkillsGraph2D = () => {
         }
 
         // DOM Element Repulsion
+        const nodeX = a.x;
+        const nodeY = a.y;
+        
         repelPoints.forEach(p => {
           // Convert DOM screen space to simulation world space
           const px = (p.x - view.x) / view.scale;
           const py = (p.y - view.y) / view.scale;
+          
+          const dx = nodeX - px;
+          const dy = nodeY - py;
+          const d2 = dx * dx + dy * dy;
+          
           const pw = p.w / view.scale;
           const ph = p.h / view.scale;
+          const minDist = Math.max(pw, ph) / 2 + 30;
+          const minDist2 = minDist * minDist;
 
-          const dx = a.x - px;
-          const dy = a.y - py;
-          const dist = Math.hypot(dx, dy) || 1;
-          
-          // Basic repulsion if inside or near the element's box
-          const minDist = Math.max(pw, ph) / 2 + 40;
-          if (dist < minDist) {
+          if (d2 < minDist2) {
+            const dist = Math.sqrt(d2) || 1;
             const force = (domRepelK * (1 - dist / minDist)) / dist;
             a.ax += dx * force;
             a.ay += dy * force;
@@ -588,35 +727,45 @@ const SkillsGraph2D = () => {
       ctx.scale(view.scale, view.scale);
 
       // Links
-      ctx.strokeStyle = colors.border;
       ctx.lineWidth = 1.5 / view.scale;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.beginPath();
-      links_sim.forEach(l => {
+      links_sim.forEach((l, idx) => {
+        const vel = (Math.hypot(l.source.vx, l.source.vy) + Math.hypot(l.target.vx, l.target.vy)) / 2;
+        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4));
+        const lsdColor = getLSDColor(idx, now, velFactor, l.target.depth, l.target.baseHue);
+        
+        ctx.strokeStyle = lsdColor.replace(')', ', 0.3)').replace('rgb', 'rgba'); // Make links semi-transparent LSD
+        ctx.beginPath();
         ctx.moveTo(l.source.x, l.source.y);
         ctx.lineTo(l.target.x, l.target.y);
+        ctx.stroke();
       });
-      ctx.stroke();
 
       // Nodes
-      nodes_sim.forEach(n => {
-        const x = n.x - n.width/2;
-        const y = n.y - n.height/2;
+      nodes_sim.forEach((n, idx) => {
+        // Velocity-dependent color shift
+        const vel = Math.hypot(n.vx, n.vy);
+        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4)); // More sensitive to movement
         
-        ctx.fillStyle = colors.bg;
-        ctx.strokeStyle = n.color || colors.border;
-        ctx.lineWidth = (n.isRoot ? 2 : 1.5) / view.scale;
+        const textColor = getLSDColor(idx, now, velFactor, n.depth, n.baseHue);
         
-        roundRect(ctx, x, y, n.width, n.height, 8);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = colors.text;
-        ctx.font = n.isRoot ? `bold 14px Inter` : `${12}px Inter`;
+        // Add a subtle glow for fast nodes on the text
+        if (velFactor > 0.2) {
+          ctx.shadowBlur = 20 * velFactor;
+          ctx.shadowColor = textColor;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+        
+        ctx.fillStyle = textColor;
+        ctx.font = `bold 12px Inter`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(n.name, n.x, n.y);
+        
+        // Reset shadow for next nodes
+        ctx.shadowBlur = 0;
       });
       ctx.restore();
 
