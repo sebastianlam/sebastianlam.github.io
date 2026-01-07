@@ -4,7 +4,6 @@ const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [theme, setTheme] = useState('dark');
-  const [density, setDensity] = useState(localStorage.getItem('density') || 'comfortable');
   const [focusMode, setFocusMode] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -19,14 +18,9 @@ export const AppProvider = ({ children }) => {
     }
   }, [theme]);
 
-  useEffect(() => {
-    localStorage.setItem('density', density);
-  }, [density]);
-
   return (
     <AppContext.Provider value={{ 
       theme, setTheme, 
-      density, setDensity, 
       focusMode, setFocusMode 
     }}>
       {children}

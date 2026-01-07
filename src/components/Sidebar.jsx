@@ -1,11 +1,11 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { cvData } from '../data/cvData';
-import { Sun, Moon, Maximize2, Type, LayoutGrid, Github, Linkedin, Mail, Volume2, VolumeX } from 'lucide-react';
+import { Sun, Moon, Maximize2, Type, Github, Linkedin, Mail, Volume2, VolumeX } from 'lucide-react';
 import { useReadAloud } from '../hooks/useReadAloud';
 
 const Sidebar = () => {
-  const { theme, setTheme, density, setDensity, setFocusMode } = useApp();
+  const { theme, setTheme, setFocusMode } = useApp();
   const { isReading, toggle } = useReadAloud();
 
   const handleReadAloud = () => {
@@ -17,7 +17,7 @@ const Sidebar = () => {
     <aside className="w-full md:w-80 md:sticky md:top-0 h-auto md:h-screen p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
       <div>
         <header className="mb-12">
-          <h1 className="text-4xl font-serif italic mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
+          <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
           <p className="text-xs font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
         </header>
 
@@ -26,7 +26,7 @@ const Sidebar = () => {
             <a 
               key={item} 
               href={`#${item.toLowerCase()}`}
-              className="block text-sm font-bold uppercase tracking-widest hover:italic transition-all text-white hover:text-white"
+              className="block text-sm font-bold uppercase tracking-widest hover:font-black transition-all text-white hover:text-white"
             >
               {item}
             </a>
@@ -35,15 +35,7 @@ const Sidebar = () => {
 
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mb-4">Controls</p>
-          <div className="grid grid-cols-3 gap-2">
-            <button 
-              onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
-              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white"
-              title="Toggle Density"
-              aria-label="Toggle content density"
-            >
-              <LayoutGrid size={14} />
-            </button>
+          <div className="grid grid-cols-2 gap-2">
             <button 
               onClick={() => setFocusMode(true)}
               className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white"

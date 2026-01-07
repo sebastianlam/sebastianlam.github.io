@@ -35,8 +35,17 @@ export const cvData = {
     { name: "OCI", category: "Cloud Platforms", level: 65 },
     { name: "Heroku", category: "Cloud Platforms", level: 70 },
     { name: "Git", category: "Version Control", level: 90 },
-    { name: "3D Modelling", category: "Design Tools", level: 85 },
-    { name: "2D Design", category: "Design Tools", level: 80 },
+    { name: "3D Modelling", category: "Design Tools", level: 85, children: [
+      { name: "Blender", level: 90 },
+      { name: "Rhino", level: 85 },
+      { name: "Grasshopper", level: 80 }
+    ]},
+    { name: "2D Design", category: "Design Tools", level: 80, children: [
+      { name: "Photoshop", level: 85 },
+      { name: "Illustrator", level: 80 },
+      { name: "InDesign", level: 75 },
+      { name: "Figma", level: 85 }
+    ]},
     { name: "Project Coordination", category: "Software Development", level: 85 },
     { name: "Documentation", category: "Software Development", level: 85 },
     { name: "Test-Driven Development (TDD)", category: "Software Development", level: 80 },

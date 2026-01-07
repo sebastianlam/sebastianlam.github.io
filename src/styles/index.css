@@ -6,8 +6,9 @@
 }
 
 :root {
-  --font-sans: "IBM Plex Mono", monospace;
-  --font-serif: "Fraunces", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 html, body {
@@ -54,8 +55,7 @@ html, body {
 
 /* Base styles for the "Big Type" look */
 h1, h2, h3 {
-  @apply font-serif italic tracking-tighter;
-  font-variation-settings: "SOFT" 0, "WONK" 1;
+  @apply font-serif tracking-tighter;
 }
 
 section {

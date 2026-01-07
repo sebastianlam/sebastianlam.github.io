@@ -5,7 +5,9 @@ import { useApp } from '../context/AppContext';
 const SkillsGraph2D = () => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const { theme } = useApp();
+  const { theme, focusMode } = useApp();
+  const focusModeRef = useRef(focusMode);
+  useEffect(() => { focusModeRef.current = focusMode; }, [focusMode]);
   
   // WebGL and Offscreen buffers
   const glState = useRef({
@@ -47,6 +49,12 @@ const SkillsGraph2D = () => {
       // Get unique category names to calculate equidistant hues
       const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
       
+      const mapSkill = (skill, baseHue) => ({
+        name: skill.name,
+        baseHue,
+        children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : []
+      });
+
       cvData.skills.forEach(skill => {
         if (!categories[skill.category]) {
           const catIndex = uniqueCats.indexOf(skill.category);
@@ -58,10 +66,7 @@ const SkillsGraph2D = () => {
           };
           root.children.push(categories[skill.category]);
         }
-        categories[skill.category].children.push({ 
-          name: skill.name,
-          baseHue: categories[skill.category].baseHue
-        });
+        categories[skill.category].children.push(mapSkill(skill, categories[skill.category].baseHue));
       });
       
       return root;
@@ -106,7 +111,7 @@ const SkillsGraph2D = () => {
       return { nodes, links, root: rootPlaced };
     };
 
-    const layout = layoutTree(treeData, { nodeWidth: 160, nodeHeight: 60, paddingX: 40 });
+    const layout = layoutTree(treeData, { nodeWidth: 200, nodeHeight: 80, paddingX: 40 });
 
     const canvas = canvasRef.current;
     
@@ -132,6 +137,7 @@ const SkillsGraph2D = () => {
         uniform vec2 uResolution;
         uniform float uRadius;
         uniform float uEnergy;
+        uniform float uScrollBlur;
         uniform float uTime;
         uniform int uSamples;
 
@@ -143,8 +149,8 @@ const SkillsGraph2D = () => {
           vec2 center = vec2(0.5, 0.5);
           float dist = distance(vUv, center);
           
-          // Optical-style falloff (vignette)
-          float blurAmount = smoothstep(0.12, 0.55, dist) * uRadius;
+          // Optical-style falloff (vignette) + Scroll-based global blur
+          float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
           
           if (blurAmount < 0.2) {
             gl_FragColor = texture2D(uTexture, vUv);
@@ -273,7 +279,7 @@ const SkillsGraph2D = () => {
     window.addEventListener('resize', resize);
 
     const baseFontSize = window.innerWidth < 768 ? 16 : 12;
-    const baseFont = `bold ${baseFontSize}px Inter, ui-sans-serif, system-ui, -apple-system, sans-serif`;
+    const baseFont = `bold ${baseFontSize}px "Inter", sans-serif`;
     ctx.font = baseFont;
 
     const measureLabelWidth = (label) => {
@@ -301,7 +307,7 @@ const SkillsGraph2D = () => {
         height: 16,
         fx: null,
         fy: null,
-        color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : '#ffffff')
+        color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff'))
       };
     });
 
@@ -314,7 +320,7 @@ const SkillsGraph2D = () => {
     // --- Physics ---
     const springK = 0.08;
     const damping = 0.05;
-    const charge = 4500;
+    const charge = 6000;
     const centerK = 0.02;
     const maxVelocity = 6.0;
     const domRepelK = 80;
@@ -514,7 +520,7 @@ const SkillsGraph2D = () => {
         // Categories have a static equidistant hue
         hue = baseHue;
       } else {
-        // Skill items (depth 2) shift within range of parent node (+/- 30 degrees)
+        // Skill items shift within range of parent node (+/- 30 degrees)
         const range = 30;
         const shift = Math.sin(time * 0.001 + index) * range;
         hue = (baseHue + shift + 360) % 360;
@@ -524,10 +530,13 @@ const SkillsGraph2D = () => {
       // Depth 0 (Root): High lightness, low saturation (Ethereal White-ish Rainbow)
       // Depth 1 (Category): High saturation, mid lightness (Vibrant Punchy)
       // Depth 2 (Skill): Mid saturation, lower lightness (Deep Detailed)
+      // Depth 3+ (Sub-skill): Lower saturation, lower lightness
       let s = 0.8, l = 0.6;
       if (depth === 0) { s = 0.3; l = 0.9; }
       else if (depth === 1) { s = 0.9; l = 0.6; }
       else if (depth === 2) { s = 0.6; l = 0.5; }
+      else if (depth === 3) { s = 0.5; l = 0.4; }
+      else { s = 0.4; l = 0.3; }
 
       // Convert HSL to RGB for lerpColor
       const h = hue / 360;
@@ -611,10 +620,10 @@ const SkillsGraph2D = () => {
           if (a.depth === 1 && b.depth === 1) {
             currentCharge = charge * 12.0; 
           }
-          // 2. Attraction between skill items (Level 2) of the same category with a minimum distance
-          else if (a.depth === 2 && b.depth === 2 && a.parent === b.parent) {
+          // 2. Attraction between sibling nodes (Level 2+) with a minimum distance
+          else if (a.depth >= 2 && b.depth >= 2 && a.parent === b.parent) {
             // Use a spring-like force with a rest length to ensure readability
-            const restLength = 60; 
+            const restLength = a.depth === 2 ? 100 : 60; 
             const k = 0.1; 
             const force = k * (dist - restLength);
             const fx = force * (dx / dist);
@@ -679,7 +688,9 @@ const SkillsGraph2D = () => {
         }
       }
 
-      const cx = width / 2, cy = height / 2;
+      const isDesktop = width >= 768;
+      const sidebarWidth = (isDesktop && !focusModeRef.current) ? 320 : 0;
+      const cx = (width + sidebarWidth) / 2, cy = height / 2;
       nodes_sim.forEach((n, i) => {
         n.ax += (cx - n.x) * centerK;
         n.ay += (cy - n.y) * centerK;
@@ -705,8 +716,8 @@ const SkillsGraph2D = () => {
       const margin = 100;
       const worldW = maxX - minX || 100;
       const worldH = maxY - minY || 100;
-      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - margin*2) / worldW, (height - margin*2) / worldH)));
-      const targetX = width / 2 - targetScale * (minX + maxX) / 2;
+      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - sidebarWidth - margin*2) / worldW, (height - margin*2) / worldH)));
+      const targetX = (width + sidebarWidth) / 2 - targetScale * (minX + maxX) / 2;
       const targetY = height / 2 - targetScale * (minY + maxY) / 2;
 
       view.vx = (view.vx + (targetX - view.x) * viewSpringK) * viewDamping;
@@ -762,7 +773,7 @@ const SkillsGraph2D = () => {
         
         ctx.fillStyle = textColor;
         const fontSize = window.innerWidth < 768 ? 16 : 12;
-        ctx.font = `bold ${fontSize}px Inter`;
+        ctx.font = `bold ${fontSize}px "Inter"`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(n.name, n.x, n.y);
@@ -789,6 +800,10 @@ const SkillsGraph2D = () => {
         const radLoc = gl.getUniformLocation(program, 'uRadius');
         // Pulse radius slightly with energy (reduced intensity)
         gl.uniform1f(radLoc, (10.0 + energy * 20.0) * dpr); 
+
+        const scrollBlurLoc = gl.getUniformLocation(program, 'uScrollBlur');
+        const scrollFactor = Math.min(window.scrollY / 800, 1.0);
+        gl.uniform1f(scrollBlurLoc, scrollFactor * 40.0 * dpr);
         
         const energyLoc = gl.getUniformLocation(program, 'uEnergy');
         gl.uniform1f(energyLoc, energy);

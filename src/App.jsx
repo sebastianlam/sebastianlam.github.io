@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 const SkillsGraph = lazy(() => import('./components/SkillsGraph2D'));
 
 function App() {
-  const { density, focusMode, setFocusMode } = useApp();
+  const { focusMode, setFocusMode } = useApp();
 
   return (
     <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
@@ -17,13 +17,31 @@ function App() {
       </Suspense>
       
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
-        {!focusMode && <Sidebar />}
+        <AnimatePresence>
+          {!focusMode && (
+            <motion.div
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: "auto" }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="w-full md:w-80">
+                <Sidebar />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
-        <main className={`flex-1 px-6 md:px-12 py-12 ${density === 'compact' ? 'space-y-12' : 'space-y-32'} transition-all`}>
+        <motion.main 
+          layout
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className={`flex-1 px-6 md:px-12 py-12 space-y-32`}
+        >
           {/* Mobile-only contact section */}
           <div className="md:hidden space-y-8 pt-4 pb-12 border-b border-white/10 repel-target">
             <header>
-              <h1 className="text-5xl font-serif italic mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
+              <h1 className="text-5xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
               <p className="text-sm font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
             </header>
             <div className="space-y-2 text-sm font-mono">
@@ -44,7 +62,7 @@ function App() {
               {cvData.experience.map((exp, i) => (
                 <div key={i} className="group relative repel-target">
                   <div className="flex justify-between items-baseline mb-2">
-                    <h3 className="text-3xl font-serif italic text-white">{exp.role}</h3>
+                    <h3 className="text-3xl font-serif text-white">{exp.role}</h3>
                     <span className="text-sm font-mono text-white">{exp.period}</span>
                   </div>
                   <p className="text-lg font-bold mb-4 text-white">{exp.company}</p>
@@ -75,7 +93,7 @@ function App() {
                   key={i} 
                   className="p-8 border-2 border-white/5 group transition-colors hover:bg-white/5 repel-target"
                 >
-                  <h3 className="text-2xl mb-4 italic text-white">{proj.title}</h3>
+                  <h3 className="text-2xl mb-4 text-white">{proj.title}</h3>
                   <p className="text-sm text-white mb-6">{proj.description}</p>
                   <div className="flex justify-between items-end">
                      <span className="text-[10px] uppercase tracking-tighter text-white">{proj.status}</span>
@@ -101,7 +119,7 @@ function App() {
               {cvData.education.map((edu, i) => (
                 <div key={i} className="group relative repel-target">
                   <div className="flex justify-between items-baseline mb-2">
-                    <h3 className="text-3xl font-serif italic text-white">{edu.degree}</h3>
+                    <h3 className="text-3xl font-serif text-white">{edu.degree}</h3>
                     <span className="text-sm font-mono text-white">{edu.period}</span>
                   </div>
                   <p className="text-lg font-bold mb-4 text-white">{edu.school}</p>
@@ -119,21 +137,27 @@ function App() {
           </Section>
 
           <Section title="Interests" id="interests">
-            <p className="text-xl font-serif italic text-white leading-relaxed repel-target">
+            <p className="text-xl font-serif text-white leading-relaxed repel-target">
               {cvData.interests}
             </p>
           </Section>
-        </main>
+        </motion.main>
       </div>
 
-      {focusMode && (
-        <button 
-          onClick={() => setFocusMode(false)}
-          className="hidden md:block fixed bottom-8 right-8 px-6 py-2 border-2 border-white/10 text-white font-bold uppercase text-xs z-50 bg-black/50 hover:bg-white hover:text-black transition-colors backdrop-blur-sm"
-        >
-          Exit Focus Mode
-        </button>
-      )}
+      <AnimatePresence>
+        {focusMode && (
+          <motion.button 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            onClick={() => setFocusMode(false)}
+            className="hidden md:block fixed bottom-8 right-8 px-6 py-2 border-2 border-white/10 text-white font-bold uppercase text-xs z-50 bg-black/50 hover:bg-white hover:text-black transition-colors backdrop-blur-sm"
+          >
+            Exit Focus Mode
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
