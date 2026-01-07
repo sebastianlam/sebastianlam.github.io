@@ -47,12 +47,12 @@ function App() {
           {!focusMode && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
+              animate={{ opacity: 1, width: 320 }}
               exit={{ opacity: 0, width: 0 }}
               transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="overflow-hidden"
+              className="md:sticky md:top-0 md:h-screen z-50"
             >
-              <div className="w-full md:w-80">
+              <div className="w-80 h-full overflow-hidden">
                 <Sidebar />
               </div>
             </motion.div>
