@@ -272,10 +272,12 @@ const SkillsGraph2D = () => {
     resize();
     window.addEventListener('resize', resize);
 
-    const baseFont = '12px Inter, ui-sans-serif, system-ui, -apple-system, sans-serif';
+    const baseFontSize = window.innerWidth < 768 ? 16 : 12;
+    const baseFont = `bold ${baseFontSize}px Inter, ui-sans-serif, system-ui, -apple-system, sans-serif`;
     ctx.font = baseFont;
 
     const measureLabelWidth = (label) => {
+      ctx.font = baseFont;
       const w = Math.ceil(ctx.measureText(label).width);
       return w + 10;
     };
@@ -759,7 +761,8 @@ const SkillsGraph2D = () => {
         }
         
         ctx.fillStyle = textColor;
-        ctx.font = `bold 12px Inter`;
+        const fontSize = window.innerWidth < 768 ? 16 : 12;
+        ctx.font = `bold ${fontSize}px Inter`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(n.name, n.x, n.y);
@@ -784,8 +787,8 @@ const SkillsGraph2D = () => {
         gl.uniform2f(resLoc, offscreenCanvas.width, offscreenCanvas.height);
         
         const radLoc = gl.getUniformLocation(program, 'uRadius');
-        // Pulse radius slightly with energy (reduced by factor of 2)
-        gl.uniform1f(radLoc, (30.0 + energy * 40.0) * dpr); 
+        // Pulse radius slightly with energy (reduced intensity)
+        gl.uniform1f(radLoc, (10.0 + energy * 20.0) * dpr); 
         
         const energyLoc = gl.getUniformLocation(program, 'uEnergy');
         gl.uniform1f(energyLoc, energy);
@@ -819,7 +822,7 @@ const SkillsGraph2D = () => {
   }, [theme]);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 w-full h-full z-0 bg-[#09090b] overflow-hidden pointer-events-none">
+    <div ref={containerRef} className="fixed inset-0 w-full h-full z-0 bg-[#050505] overflow-hidden pointer-events-none">
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" style={{ touchAction: 'none' }} />
     </div>
   );
