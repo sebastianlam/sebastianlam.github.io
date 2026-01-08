@@ -64,21 +64,6 @@ function App() {
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className={`flex-1 px-6 md:px-12 py-12 space-y-32`}
         >
-          {/* Mobile-only contact section */}
-          <div className="md:hidden space-y-8 pt-4 pb-12 border-b border-white/10 repel-target">
-            <header>
-              <h1 className="text-5xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
-              <p className="text-sm font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
-            </header>
-            <div className="space-y-2 text-sm font-mono">
-              <p className="text-white">{cvData.personal.email}</p>
-              <div className="flex gap-4 pt-4">
-                <a href={cvData.personal.github} target="_blank" rel="noopener" className="text-white underline uppercase text-xs font-bold tracking-widest">Github</a>
-                <a href={cvData.personal.linkedin} target="_blank" rel="noopener" className="text-white underline uppercase text-xs font-bold tracking-widest">LinkedIn</a>
-              </div>
-            </div>
-          </div>
-
           <Section title="Skills" id="skills" hideTitle>
             <div className="h-[400px]" /> {/* Spacer where the graph used to be */}
           </Section>
