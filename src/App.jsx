@@ -10,6 +10,13 @@ const SkillsGraph = lazy(() => import('./components/SkillsGraph2D'));
 
 function App() {
   const { focusMode, setFocusMode } = useApp();
+  const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const lenis = new Lenis({
@@ -35,8 +42,6 @@ function App() {
       lenis.destroy();
     };
   }, []);
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
     <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
@@ -158,14 +163,14 @@ function App() {
       </div>
 
       <AnimatePresence>
-        {focusMode && (
+        {focusMode && !isMobile && (
           <motion.button 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
             onClick={() => setFocusMode(false)}
-            className="hidden md:block fixed bottom-8 right-8 px-6 py-2 border-2 border-white/10 text-white font-bold uppercase text-xs z-50 bg-black/50 hover:bg-white hover:text-black transition-colors backdrop-blur-sm"
+            className="fixed bottom-8 right-8 px-6 py-2 border-2 border-white/10 text-white font-bold uppercase text-xs z-50 bg-black/50 hover:bg-white hover:text-black transition-colors backdrop-blur-sm"
           >
             Exit Focus Mode
           </motion.button>

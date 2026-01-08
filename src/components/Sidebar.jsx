@@ -14,7 +14,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-full h-full p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
+    <aside className="hidden md:flex w-full h-full p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
       <div>
         <header className="mb-12">
           <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>

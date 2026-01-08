@@ -43,7 +43,8 @@ const SkillsGraph2D = () => {
 
     // --- Data Preparation ---
     const buildTree = () => {
-      const root = { name: cvData.personal.name, children: [] };
+      const isMobile = window.innerWidth < 768;
+      const root = { name: isMobile ? cvData.personal.name : "Skills", children: [] };
       const categories = {};
       
       // Get unique category names to calculate equidistant hues
@@ -270,6 +271,16 @@ const SkillsGraph2D = () => {
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
+      // Update root node name and width based on screen size
+      if (nodes_sim && nodes_sim.length > 0) {
+        const isMobile = width < 768;
+        const newName = isMobile ? "Skills" : cvData.personal.name;
+        if (nodes_sim[0].name !== newName) {
+          nodes_sim[0].name = newName;
+          nodes_sim[0].width = measureLabelWidth(newName, 0);
+        }
+      }
+
       if (glState.current.offscreenCanvas) {
         glState.current.offscreenCanvas.width = width * dpr;
         glState.current.offscreenCanvas.height = height * dpr;
@@ -289,9 +300,6 @@ const SkillsGraph2D = () => {
         glState.current.gl.viewport(0, 0, canvas.width, canvas.height);
       }
     };
-    resize();
-    window.addEventListener('resize', resize);
-
     const baseFontSize = window.innerWidth < 768 ? 16 : 12;
     const baseFont = `bold ${baseFontSize}px "Inter", sans-serif`;
     ctx.font = baseFont;
@@ -349,6 +357,9 @@ const SkillsGraph2D = () => {
       target: nodes_sim[layout.nodes.indexOf(l.target)],
       rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40
     }));
+
+    resize();
+    window.addEventListener('resize', resize);
 
     // --- Physics ---
     const springK = 0.08;
