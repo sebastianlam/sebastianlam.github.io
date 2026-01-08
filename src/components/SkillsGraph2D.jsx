@@ -745,9 +745,19 @@ const SkillsGraph2D = () => {
       const sidebarWidth = (isDesktop && !focusModeRef.current) ? 320 : 0;
       const cx = (width + sidebarWidth) / 2, cy = height / 2;
       nodes_sim.forEach((n, i) => {
+        // Base centering force
         n.ax += (cx - n.x) * centerK;
         // Apply stronger centering on Y to keep the layout flat
         n.ay += (cy - n.y) * (centerK * 4.0);
+
+        // Hover-based pulling force to center
+        if (n.hoverInfluence > 1.0) {
+          const hoverPullK = 0.08; // Additional pulling strength
+          const pullStrength = (n.hoverInfluence - 1.0) * hoverPullK;
+          n.ax += (cx - n.x) * pullStrength;
+          n.ay += (cy - n.y) * pullStrength;
+        }
+
         if (n.fx !== null) { n.x = n.fx; n.vx = 0; }
         if (n.fy !== null) { n.y = n.fy; n.vy = 0; }
         n.vx = (n.vx + n.ax) * damping;
