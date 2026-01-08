@@ -364,6 +364,8 @@ const SkillsGraph2D = () => {
     const viewSpringK = 0.006;
     const viewDamping = 0.90;
 
+    const mousePos = { x: -1000, y: -1000 };
+
     // --- Interaction ---
     let dragging = null;
     let repelPoints = [];
@@ -487,8 +489,9 @@ const SkillsGraph2D = () => {
     const hit = (x, y) => {
       for (let i = nodes_sim.length - 1; i >= 0; i--) {
         const n = nodes_sim[i];
-        const hitWidth = n.depth === 0 ? n.width : n.width; // n.width is already larger for depth 0
-        const hitHeight = n.depth === 0 ? n.height : n.height;
+        const influence = n.hoverInfluence || 1.0;
+        const hitWidth = n.width * influence;
+        const hitHeight = n.height * influence;
         if (Math.abs(x - n.x) < hitWidth/2 && Math.abs(y - n.y) < hitHeight/2) return n;
       }
       return null;
@@ -506,8 +509,11 @@ const SkillsGraph2D = () => {
       }
     };
     const onPointerMove = (e) => {
-      if (!dragging) return;
       const p = toWorld(getPointer(e));
+      mousePos.x = p.x;
+      mousePos.y = p.y;
+
+      if (!dragging) return;
       dragging.fx = p.x; dragging.fy = p.y;
       // Prevent scrolling when dragging a node
       if (e.cancelable) e.preventDefault();
@@ -623,7 +629,17 @@ const SkillsGraph2D = () => {
       updateRepelPoints();
 
       // Step Physics
-      nodes_sim.forEach(n => { n.ax = 0; n.ay = 0; });
+      nodes_sim.forEach(n => { 
+        n.ax = 0; n.ay = 0; 
+        
+        // Gaussian Hover Influence
+        const dx = n.x - mousePos.x;
+        const dy = n.y - mousePos.y;
+        const dist = Math.hypot(dx, dy);
+        const sigma = 200; // Spread of influence
+        const amp = 1.0; // Maximum additional scale
+        n.hoverInfluence = 1.0 + amp * Math.exp(-(dist * dist) / (2 * sigma * sigma));
+      });
 
       links_sim.forEach(l => {
         const dx = l.target.x - l.source.x;
@@ -647,15 +663,15 @@ const SkillsGraph2D = () => {
           const dist2 = Math.max(36, dx*dx + dy*dy);
           const dist = Math.sqrt(dist2);
           
-          let currentCharge = charge;
+          let currentCharge = charge * a.hoverInfluence * b.hoverInfluence;
 
           // 1. Massive repulsion for the root node (Level 0)
           if (a.depth === 0 || b.depth === 0) {
-            currentCharge = charge * 30.0; 
+            currentCharge = (charge * 30.0) * a.hoverInfluence * b.hoverInfluence; 
           }
           // 2. Very strong repulsion between skill categories (Level 1)
           else if (a.depth === 1 && b.depth === 1) {
-            currentCharge = charge * 12.0; 
+            currentCharge = (charge * 12.0) * a.hoverInfluence * b.hoverInfluence; 
           }
           // 3. Attraction between sibling nodes (Level 2+) with a minimum distance
           else if (a.depth >= 2 && b.depth >= 2 && a.parent === b.parent) {
@@ -832,30 +848,42 @@ const SkillsGraph2D = () => {
         if (n.depth !== 0) {
           ctx.fillStyle = nodeColor;
           ctx.beginPath();
-          ctx.arc(n.x, n.y, 1.5 / view.scale, 0, Math.PI * 2);
+          ctx.arc(n.x, n.y, (1.5 * n.hoverInfluence) / view.scale, 0, Math.PI * 2);
           ctx.fill();
 
           // Add glow for active/fast nodes
           if (velFactor > 0.2) {
-            ctx.shadowBlur = 10 * velFactor;
+            ctx.shadowBlur = 10 * velFactor * n.hoverInfluence;
             ctx.shadowColor = nodeColor;
           }
         }
 
         // Label Presentation (Offset above nucleus)
+        ctx.strokeStyle = '#ff0000'; // Red border
+        ctx.lineJoin = 'round';
+        
         if (n.depth === 0) {
-          const fontSize = window.innerWidth < 768 ? 60 : 120;
+          const baseFontSize = window.innerWidth < 768 ? 60 : 120;
+          const fontSize = baseFontSize * n.hoverInfluence;
           ctx.font = `bold ${fontSize}px "Inter"`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.letterSpacing = '-4px';
+          
+          ctx.lineWidth = 4 * n.hoverInfluence;
+          ctx.strokeText(n.name.toUpperCase(), n.x, n.y);
           ctx.fillText(n.name.toUpperCase(), n.x, n.y);
+          
           ctx.letterSpacing = '0px';
         } else {
-          const fontSize = window.innerWidth < 768 ? 16 : 12;
+          const baseFontSize = window.innerWidth < 768 ? 16 : 12;
+          const fontSize = baseFontSize * n.hoverInfluence;
           ctx.font = `bold ${fontSize}px "Inter"`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
+          
+          ctx.lineWidth = 2 * n.hoverInfluence;
+          ctx.strokeText(n.name, n.x, n.y - (10 / view.scale));
           ctx.fillText(n.name, n.x, n.y - (10 / view.scale));
         }
         
