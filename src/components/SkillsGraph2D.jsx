@@ -43,7 +43,7 @@ const SkillsGraph2D = () => {
 
     // --- Data Preparation ---
     const buildTree = () => {
-      const root = { name: 'Skills', children: [] };
+      const root = { name: cvData.personal.name, children: [] };
       const categories = {};
       
       // Get unique category names to calculate equidistant hues

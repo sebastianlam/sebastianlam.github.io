@@ -36,6 +36,8 @@ function App() {
     };
   }, []);
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
       <Suspense fallback={null}>
@@ -44,7 +46,7 @@ function App() {
       
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
         <AnimatePresence>
-          {!focusMode && (
+          {!focusMode && !isMobile && (
             <motion.div
               initial={{ opacity: 0, width: 0 }}
               animate={{ opacity: 1, width: 320 }}
