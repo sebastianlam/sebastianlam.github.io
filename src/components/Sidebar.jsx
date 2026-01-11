@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { cvData } from '../data/cvData';
-import { Sun, Moon, Maximize2, Type, Github, Linkedin, Mail, Volume2, VolumeX } from 'lucide-react';
+import { Sun, Moon, Maximize2, Type, Github, Linkedin, Mail, Volume2, VolumeX, FileText } from 'lucide-react';
 import { useReadAloud } from '../hooks/useReadAloud';
 
 const Sidebar = () => {
@@ -52,6 +52,15 @@ const Sidebar = () => {
             >
               {isReading ? <VolumeX size={14} /> : <Volume2 size={14} />}
             </button>
+            <a 
+              href={cvData.personal.cv} 
+              download="Jim_Lam_CV.pdf"
+              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white flex items-center justify-center"
+              title="Download CV"
+              aria-label="Download CV PDF"
+            >
+              <FileText size={14} />
+            </a>
           </div>
         </div>
       </div>
