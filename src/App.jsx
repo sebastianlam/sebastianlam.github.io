@@ -5,8 +5,7 @@ import Section from './components/Section';
 import { cvData } from './data/cvData';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
-
-const SkillsGraph = lazy(() => import('./components/SkillsGraph2D'));
+import SkillsGraph from './components/SkillsGraph2D';
 
 function App() {
   const { focusMode, setFocusMode } = useApp();
@@ -45,9 +44,7 @@ function App() {
 
   return (
     <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
-      <Suspense fallback={null}>
-        <SkillsGraph />
-      </Suspense>
+      <SkillsGraph />
       
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
         <AnimatePresence>

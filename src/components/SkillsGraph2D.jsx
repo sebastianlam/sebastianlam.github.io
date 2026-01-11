@@ -27,6 +27,10 @@ const SkillsGraph2D = () => {
     lastAdjustment: performance.now()
   });
 
+  const lastInteractionTime = useRef(performance.now());
+  const cachedRepelPoints = useRef([]);
+  const lastScrollY = useRef(0);
+
   const getThemeColors = () => {
     return {
       border: 'rgba(134, 239, 172, 0.15)',
@@ -38,273 +42,137 @@ const SkillsGraph2D = () => {
   };
 
   useEffect(() => {
+    console.log('SkillsGraph2D: useEffect started');
     const container = containerRef.current;
     if (!container) return;
 
-    // --- Data Preparation ---
-    const buildTree = () => {
-      const isMobile = window.innerWidth < 768;
-      const root = { name: isMobile ? cvData.personal.name : "Skills", children: [] };
-      const categories = {};
-      
-      // Get unique category names to calculate equidistant hues
-      const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
-      
-      const mapSkill = (skill, baseHue) => ({
-        name: skill.name,
-        baseHue,
-        children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : []
-      });
-
-      cvData.skills.forEach(skill => {
-        if (!categories[skill.category]) {
-          const catIndex = uniqueCats.indexOf(skill.category);
-          const baseHue = (catIndex / uniqueCats.length) * 360;
-          categories[skill.category] = { 
-            name: skill.category, 
-            children: [],
-            baseHue: baseHue
-          };
-          root.children.push(categories[skill.category]);
-        }
-        categories[skill.category].children.push(mapSkill(skill, categories[skill.category].baseHue));
-      });
-      
-      return root;
-    };
-
-    const treeData = buildTree();
-
-    const layoutTree = (root, options) => {
-      const nodeSizeY = options.nodeHeight || 40;
-      const nodeSizeX = options.nodeWidth || 140;
-      const nodes = [];
-      const links = [];
-      const depthToLeaves = new Map();
-
-      function walk(node, depth, parent) {
-        const current = { 
-          node, 
-          depth, 
-          x: 0, 
-          y: depth * nodeSizeY, 
-          parent: null,
-          baseHue: node.baseHue || 0 
-        };
-        if (parent) current.parent = parent;
-        if (!node.children || node.children.length === 0) {
-          const idx = (depthToLeaves.get(depth) || 0);
-          depthToLeaves.set(depth, idx + 1);
-          current.x = idx * nodeSizeX;
-        } else {
-          const children = node.children.map(child => walk(child, depth + 1, current));
-          const minX = Math.min(...children.map(c => c.x));
-          const maxX = Math.max(...children.map(c => c.x));
-          current.x = (minX + maxX) / 2;
-        }
-        nodes.push(current);
-        if (current.parent) links.push({ source: current.parent, target: current });
-        return current;
-      }
-      const rootPlaced = walk(root, 0, null);
-      const minX = Math.min(...nodes.map(n => n.x));
-      nodes.forEach(n => n.x = n.x - minX + options.paddingX);
-      return { nodes, links, root: rootPlaced };
-    };
-
-    const layout = layoutTree(treeData, { nodeWidth: 200, nodeHeight: 80, paddingX: 40 });
-
     const canvas = canvasRef.current;
-    
-    // --- WebGL Initialization ---
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
+    let width = window.innerWidth, height = window.innerHeight;
+
+    // --- 1. WebGL & Offscreen Canvas Initialization (MUST BE FIRST) ---
     const initWebGL = () => {
-      const gl = canvas.getContext('webgl', { antialias: true, alpha: true });
-      if (!gl) return null;
+      // Create offscreen canvas for 2D drawing (text/nodes)
+      if (!glState.current.offscreenCanvas) {
+        glState.current.offscreenCanvas = document.createElement('canvas');
+        glState.current.offscreenCtx = glState.current.offscreenCanvas.getContext('2d', { alpha: true });
+      }
 
-      const vsSource = `
-        attribute vec2 position;
-        varying vec2 vUv;
-        void main() {
-          vUv = position * 0.5 + 0.5;
-          vUv.y = 1.0 - vUv.y; // Flip Y for canvas texture
-          gl_Position = vec4(position, 0.0, 1.0);
-        }
-      `;
-
-      const fsSource = `
-        precision highp float;
-        varying vec2 vUv;
-        uniform sampler2D uTexture;
-        uniform vec2 uResolution;
-        uniform float uRadius;
-        uniform float uEnergy;
-        uniform float uScrollBlur;
-        uniform float uTime;
-        uniform int uSamples;
-
-        float random(vec2 uv) {
-          return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
-        }
-
-        void main() {
-          vec2 center = vec2(0.5, 0.5);
-          float dist = distance(vUv, center);
-          
-          // Optical-style falloff (vignette) + Scroll-based global blur
-          float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
-          
-          if (blurAmount < 0.2) {
-            // 16x MSAA (Jittered Grid) for ultra-smooth 2D rendering
-            vec2 texelSize = 1.0 / uResolution;
-            vec4 color = vec4(0.0);
-            
-            // 4x4 Jittered Grid for superior edge smoothing
-            for (int x = 0; x < 4; x++) {
-              for (int y = 0; y < 4; y++) {
-                vec2 offset = (vec2(float(x), float(y)) - 1.5) * 0.25;
-                // Add a small jitter based on position for even better smoothing
-                float jitter = random(vUv + vec2(float(x), float(y))) * 0.1;
-                color += texture2D(uTexture, vUv + (offset + jitter) * texelSize);
-              }
-            }
-            
-            gl_FragColor = color / 16.0;
-            return;
-          }
-
-          vec4 color = vec4(0.0);
-          float total = 0.0;
-          
-          // Poisson Disk-style sampling for true optical Gaussian feel
-          float goldenAngle = 2.39996; // Golden angle in radians
-          float jitter = random(vUv) * 6.28;
-          
-          // WebGL 1.0 requires constant loop limit, so we use a max and break
-          for (int i = 0; i < 32; i++) {
-            if (i >= uSamples) break;
-            
-            float r = sqrt(float(i) / float(uSamples)) * blurAmount;
-            float theta = float(i) * goldenAngle + jitter;
-            vec2 offset = vec2(cos(theta), sin(theta)) * r / uResolution;
-            
-            // Optimization: Only apply chromatic aberration to every other sample
-            if (mod(float(i), 2.0) < 1.0) {
-              float aberration = 1.0 + (uEnergy * 0.05 * (blurAmount / uRadius));
-              color.r += texture2D(uTexture, vUv + offset * aberration).r;
-              color.g += texture2D(uTexture, vUv + offset).g;
-              color.b += texture2D(uTexture, vUv + offset / aberration).b;
-            } else {
-              color += texture2D(uTexture, vUv + offset);
-            }
-            total += 1.0;
-          }
-          
-          vec4 finalColor = color / total;
-
-          // Animated Grain/Noise
-          float grain = (random(vUv + fract(uTime)) - 0.5) * 0.02;
-          // Only apply grain to blurred areas to simulate "frosted" look
-          finalColor.rgb += grain * (blurAmount / uRadius);
-          
-          // Subtle darkening at the very edges (mechanical vignette)
-          finalColor.rgb *= (1.0 - smoothstep(0.4, 0.8, dist) * 0.1);
-
-          gl_FragColor = finalColor;
-        }
-      `;
-
-      const createShader = (gl, type, source) => {
-        const shader = gl.createShader(type);
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          console.error(gl.getShaderInfoLog(shader));
-          gl.deleteShader(shader);
+      // Try to get WebGL context on main canvas
+      if (!glState.current.gl) {
+        const gl = canvas.getContext('webgl', { antialias: true, alpha: true, stencil: false, depth: false });
+        if (!gl) {
+          console.error('SkillsGraph2D: WebGL initialization failed');
           return null;
         }
-        return shader;
-      };
 
-      const program = gl.createProgram();
-      const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
-      const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
-      gl.attachShader(program, vs);
-      gl.attachShader(program, fs);
-      gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
-
-      const buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-
-      const texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-      return { gl, program, buffer, texture };
+        const vsSource = `
+          attribute vec2 position;
+          varying vec2 vUv;
+          void main() {
+            vUv = position * 0.5 + 0.5;
+            vUv.y = 1.0 - vUv.y;
+            gl_Position = vec4(position, 0.0, 1.0);
+          }
+        `;
+        const fsSource = `
+          precision highp float;
+          varying vec2 vUv;
+          uniform sampler2D uTexture;
+          uniform vec2 uResolution;
+          uniform float uRadius;
+          uniform float uEnergy;
+          uniform float uScrollBlur;
+          uniform float uTime;
+          uniform int uSamples;
+          float random(vec2 uv) { return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453); }
+          void main() {
+            vec2 center = vec2(0.5, 0.5);
+            float dist = distance(vUv, center);
+            float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
+            if (blurAmount < 0.2) {
+              vec2 texelSize = 1.0 / uResolution;
+              vec4 color = vec4(0.0);
+              for (int x = 0; x < 2; x++) {
+                for (int y = 0; y < 2; y++) {
+                  vec2 offset = (vec2(float(x), float(y)) - 0.5) * 0.5;
+                  float jitter = random(vUv + vec2(float(x), float(y))) * 0.1;
+                  color += texture2D(uTexture, vUv + (offset + jitter) * texelSize);
+                }
+              }
+              gl_FragColor = color / 4.0;
+              return;
+            }
+            vec4 color = vec4(0.0);
+            float total = 0.0;
+            float goldenAngle = 2.39996;
+            float jitter = random(vUv) * 6.28;
+            for (int i = 0; i < 16; i++) {
+              if (i >= uSamples) break;
+              float r = sqrt(float(i) / float(uSamples)) * blurAmount;
+              float theta = float(i) * goldenAngle + jitter;
+              vec2 offset = vec2(cos(theta), sin(theta)) * r / uResolution;
+              if (mod(float(i), 2.0) < 1.0) {
+                float aberration = 1.0 + (uEnergy * 0.05 * (blurAmount / uRadius));
+                color.r += texture2D(uTexture, vUv + offset * aberration).r;
+                color.g += texture2D(uTexture, vUv + offset).g;
+                color.b += texture2D(uTexture, vUv + offset / aberration).b;
+              } else { color += texture2D(uTexture, vUv + offset); }
+              total += 1.0;
+            }
+            vec4 finalColor = color / total;
+            float grain = (random(vUv + fract(uTime)) - 0.5) * 0.02;
+            finalColor.rgb += grain * (blurAmount / uRadius);
+            finalColor.rgb *= (1.0 - smoothstep(0.4, 0.8, dist) * 0.1);
+            gl_FragColor = finalColor;
+          }
+        `;
+        const createShader = (gl, type, source) => {
+          const shader = gl.createShader(type);
+          gl.shaderSource(shader, source);
+          gl.compileShader(shader);
+          if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error(gl.getShaderInfoLog(shader));
+            gl.deleteShader(shader);
+            return null;
+          }
+          return shader;
+        };
+        const program = gl.createProgram();
+        const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+        const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+        gl.attachShader(program, vs);
+        gl.attachShader(program, fs);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        
+        return { gl, program, buffer, texture };
+      }
+      return glState.current;
     };
 
-    if (!glState.current.gl) {
-      const webgl = initWebGL();
-      if (webgl) {
-        glState.current = { ...glState.current, ...webgl };
-        // Create offscreen 2D canvas
-        glState.current.offscreenCanvas = document.createElement('canvas');
-        glState.current.offscreenCtx = glState.current.offscreenCanvas.getContext('2d');
-      }
+    const webgl = initWebGL();
+    if (webgl && webgl.gl) {
+      glState.current = { ...glState.current, ...webgl };
     }
 
-    const ctx = glState.current.offscreenCtx || canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    ctx.imageSmoothingQuality = 'high';
-    
-    let width, height;
-    const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
+    const range = document.createRange();
+    const lastRepelCacheUpdate = { current: 0 };
+    const repelPoints = { current: [] };
 
-      // Update root node name and width based on screen size
-      if (nodes_sim && nodes_sim.length > 0) {
-        const isMobile = width < 768;
-        const newName = isMobile ? "Skills" : cvData.personal.name;
-        if (nodes_sim[0].name !== newName) {
-          nodes_sim[0].name = newName;
-          nodes_sim[0].width = measureLabelWidth(newName, 0);
-        }
-      }
-
-      if (glState.current.offscreenCanvas) {
-        glState.current.offscreenCanvas.width = width * dpr;
-        glState.current.offscreenCanvas.height = height * dpr;
-        
-        // Ensure texture is resized on GPU
-        if (glState.current.gl) {
-          const { gl, texture } = glState.current;
-          gl.bindTexture(gl.TEXTURE_2D, texture);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 
-            glState.current.offscreenCanvas.width, 
-            glState.current.offscreenCanvas.height, 
-            0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        }
-      }
-
-      if (glState.current.gl) {
-        glState.current.gl.viewport(0, 0, canvas.width, canvas.height);
-      }
-    };
-    const baseFontSize = window.innerWidth < 768 ? 16 : 12;
-    const baseFont = `bold ${baseFontSize}px "Inter", sans-serif`;
-    ctx.font = baseFont;
-
+    // --- 2. Utility Functions ---
     const measureLabelWidth = (label, depth = 1) => {
+      // Use offscreen context for measuring to avoid locking main canvas to 2D
+      const ctx = glState.current.offscreenCtx || canvas.getContext('2d');
       const fontSize = depth === 0 
         ? (window.innerWidth < 768 ? 60 : 120) 
         : (window.innerWidth < 768 ? 16 : 12);
@@ -313,644 +181,297 @@ const SkillsGraph2D = () => {
       return w + (depth === 0 ? 40 : 10);
     };
 
-    const rootFixed = { x: 200, y: 150 };
-    const nodes_sim = layout.nodes.map(n => {
-      const label = n.node.name;
-      const w = measureLabelWidth(label, n.depth);
-
-      // Seed relative to top-left root, sprouting towards bottom-right
-      let initX, initY;
-      if (n.depth === 0) {
-        initX = rootFixed.x;
-        initY = rootFixed.y;
-      } else {
-        // Map 360-degree baseHue to a 90-degree wedge sprouting bottom-right (0 to PI/2)
-        const angle = (n.baseHue / 360) * (Math.PI / 2);
-        const distance = n.depth === 1 ? 300 : n.depth * 180;
-        const jitter = 10;
-        const flatteningFactor = 0.6; // Less squashed since root is larger
-        initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * jitter;
-        initY = rootFixed.y + Math.sin(angle) * distance * flatteningFactor + (Math.random() - 0.5) * jitter;
-      }
-
-      return {
-        name: label,
-        depth: n.depth,
-        parent: n.parent, // Store parent reference for hierarchy forces
-        baseHue: n.baseHue, // Store base hue for psychedelic effects
-        x: initX,
-        y: initY,
-        vx: 0,
-        vy: 0,
-        ax: 0,
-        ay: 0,
-        width: w,
-        height: n.depth === 0 ? 80 : 16,
-        fx: null,
-        fy: null,
-        color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff'))
-      };
-    });
-
-    const links_sim = layout.links.map(l => ({
-      source: nodes_sim[layout.nodes.indexOf(l.source)],
-      target: nodes_sim[layout.nodes.indexOf(l.target)],
-      rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40
-    }));
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    // --- Physics ---
-    const springK = 0.08;
-    const damping = 0.05;
-    const charge = 6000;
-    const centerK = 0.02;
-    const maxVelocity = 6.0;
-    const domRepelK = 80;
-    const edgeRepelK = 1000;
-    const edgeMargin = 50;
-
-    const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
-    const viewSpringK = 0.006;
-    const viewDamping = 0.90;
-
-    const mousePos = { x: -1000, y: -1000 };
-
-    // --- Interaction ---
-    let dragging = null;
-    let repelPoints = [];
-    let cachedTextNodes = [];
-    let lastRepelCacheUpdate = 0;
-    const range = document.createRange();
-
     const updateRepelPoints = (forceRefreshCache = false) => {
       const now = performance.now();
+      const currentScrollYPos = window.scrollY;
       
-      // Refresh the list of text nodes every 2 seconds or if forced
-      if (forceRefreshCache || now - lastRepelCacheUpdate > 2000 || cachedTextNodes.length === 0) {
+      if (forceRefreshCache || now - lastRepelCacheUpdate.current > 2000 || cachedRepelPoints.current.length === 0) {
         const roots = document.querySelectorAll('.repel-target');
         const textNodes = [];
-        
         roots.forEach(root => {
           const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-            acceptNode: (node) => {
-              if (node.textContent.trim().length > 0) {
-                return NodeFilter.FILTER_ACCEPT;
-              }
-              return NodeFilter.FILTER_SKIP;
-            }
+            acceptNode: (node) => (node.textContent.trim().length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP)
           });
-
           let node;
-          while (node = walker.nextNode()) {
-            textNodes.push(node);
-          }
+          while (node = walker.nextNode()) textNodes.push(node);
         });
-        cachedTextNodes = textNodes;
-        lastRepelCacheUpdate = now;
-      }
 
-      // Update rects for all characters in cached text nodes every frame
-      const points = [];
-      const vh = window.innerHeight;
-      const vw = window.innerWidth;
-      
-      for (let i = 0; i < cachedTextNodes.length; i++) {
-        const node = cachedTextNodes[i];
-        if (!node.isConnected) continue;
-        
-        // Quick check if the parent element is roughly in view before processing characters
-        const parentRect = node.parentElement.getBoundingClientRect();
-        if (parentRect.bottom < -50 || parentRect.top > vh + 50 || parentRect.right < -50 || parentRect.left > vw + 50) {
-          continue;
-        }
-
-        const text = node.textContent;
-        for (let j = 0; j < text.length; j++) {
-          // Skip whitespace
-          if (text[j] === ' ' || text[j] === '\n' || text[j] === '\r' || text[j] === '\t') continue;
-          
-          range.setStart(node, j);
-          range.setEnd(node, j + 1);
-          const rect = range.getBoundingClientRect();
-          
-          if (rect.bottom > -20 && rect.top < vh + 20) {
-            points.push({
-              x: rect.left + rect.width / 2,
-              y: rect.top + rect.height / 2,
-              w: rect.width,
-              h: rect.height
-            });
+        const points = [];
+        const vh = window.innerHeight;
+        for (let i = 0; i < textNodes.length; i++) {
+          const node = textNodes[i];
+          if (!node.isConnected) continue;
+          const parentRect = node.parentElement.getBoundingClientRect();
+          if (parentRect.bottom < -100 || parentRect.top > vh + 100) continue;
+          const text = node.textContent;
+          for (let j = 0; j < text.length; j++) {
+            if (text[j] === ' ' || text[j] === '\n' || text[j] === '\r' || text[j] === '\t') continue;
+            range.setStart(node, j); range.setEnd(node, j + 1);
+            const rect = range.getBoundingClientRect();
+            points.push({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 + currentScrollYPos, w: rect.width, h: rect.height });
           }
         }
+        cachedRepelPoints.current = points; lastRepelCacheUpdate.current = now;
       }
-      repelPoints = points;
+      repelPoints.current = cachedRepelPoints.current.map(p => ({ ...p, y: p.y - currentScrollYPos }));
+      lastScrollY.current = currentScrollYPos;
     };
 
-    const getPointer = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const nodes_sim_ref = { current: [] };
+
+    const resize = () => {
+      width = window.innerWidth; height = window.innerHeight;
+      canvas.width = width * dpr; canvas.height = height * dpr;
+      canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
+
+      if (nodes_sim_ref.current && nodes_sim_ref.current.length > 0) {
+        const isMobile = width < 768;
+        const newName = isMobile ? "Skills" : cvData.personal.name;
+        if (nodes_sim_ref.current[0].name !== newName) {
+          nodes_sim_ref.current[0].name = newName;
+          nodes_sim_ref.current[0].width = measureLabelWidth(newName, 0);
+        }
+      }
+
+      if (glState.current.offscreenCanvas) {
+        glState.current.offscreenCanvas.width = width * dpr;
+        glState.current.offscreenCanvas.height = height * dpr;
+        if (glState.current.gl) {
+          const { gl, texture } = glState.current;
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width * dpr, height * dpr, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          gl.viewport(0, 0, width * dpr, height * dpr);
+        }
+      }
+      updateRepelPoints(true);
     };
-    const toWorld = (p) => ({
-      x: (p.x - view.x) / view.scale,
-      y: (p.y - view.y) / view.scale
+
+    // --- 3. Data Preparation ---
+    const buildTree = () => {
+      const isMobile = window.innerWidth < 768;
+      const root = { name: isMobile ? cvData.personal.name : "Skills", children: [] };
+      const categories = {};
+      const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
+      const mapSkill = (skill, baseHue) => ({ name: skill.name, baseHue, children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : [] });
+      cvData.skills.forEach(skill => {
+        if (!categories[skill.category]) {
+          const catIndex = uniqueCats.indexOf(skill.category);
+          const baseHue = (catIndex / uniqueCats.length) * 360;
+          categories[skill.category] = { name: skill.category, children: [], baseHue };
+          root.children.push(categories[skill.category]);
+        }
+        categories[skill.category].children.push(mapSkill(skill, categories[skill.category].baseHue));
+      });
+      return root;
+    };
+
+    const layoutTree = (root, options) => {
+      const nodeSizeY = options.nodeHeight || 40, nodeSizeX = options.nodeWidth || 140;
+      const nodes = [], links = [], depthToLeaves = new Map();
+      function walk(node, depth, parent) {
+        const current = { node, depth, x: 0, y: depth * nodeSizeY, parent: null, baseHue: node.baseHue || 0 };
+        if (parent) current.parent = parent;
+        if (!node.children || node.children.length === 0) {
+          const idx = (depthToLeaves.get(depth) || 0); depthToLeaves.set(depth, idx + 1);
+          current.x = idx * nodeSizeX;
+        } else {
+          const children = node.children.map(child => walk(child, depth + 1, current));
+          current.x = (Math.min(...children.map(c => c.x)) + Math.max(...children.map(c => c.x))) / 2;
+        }
+        nodes.push(current); if (current.parent) links.push({ source: current.parent, target: current });
+        return current;
+      }
+      const rootPlaced = walk(root, 0, null), minX = Math.min(...nodes.map(n => n.x));
+      nodes.forEach(n => n.x = n.x - minX + options.paddingX);
+      return { nodes, links, root: rootPlaced };
+    };
+
+    const treeData = buildTree();
+    const layout = layoutTree(treeData, { nodeWidth: 200, nodeHeight: 80, paddingX: 40 });
+    const rootFixed = { x: 200, y: 150 };
+    
+    nodes_sim_ref.current = layout.nodes.map(n => {
+      const label = n.node.name, w = measureLabelWidth(label, n.depth);
+      let initX, initY;
+      if (n.depth === 0) { initX = rootFixed.x; initY = rootFixed.y; }
+      else {
+        const angle = (n.baseHue / 360) * (Math.PI / 2);
+        const distance = n.depth === 1 ? 300 : n.depth * 180;
+        initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * 10;
+        initY = rootFixed.y + Math.sin(angle) * distance * 0.6 + (Math.random() - 0.5) * 10;
+      }
+      return { name: label, depth: n.depth, parent: n.parent, baseHue: n.baseHue, x: initX, y: initY, vx: 0, vy: 0, ax: 0, ay: 0, width: w, height: n.depth === 0 ? 80 : 16, fx: null, fy: null, color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff')) };
     });
+
+    const links_sim = layout.links.map(l => ({ source: nodes_sim_ref.current[layout.nodes.indexOf(l.source)], target: nodes_sim_ref.current[layout.nodes.indexOf(l.target)], rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40 }));
+
+    // --- 4. Physics & Animation ---
+    resize();
+    window.addEventListener('resize', resize);
+    window.addEventListener('scroll', () => updateRepelPoints());
+
+    const springK = 0.08, damping = 0.05, charge = 6000, centerK = 0.02, maxVelocity = 6.0;
+    const domRepelK = 80, edgeRepelK = 1000, edgeMargin = 50;
+    const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
+    const viewSpringK = 0.006, viewDamping = 0.90, mousePos = { x: -1000, y: -1000 };
+    const STABLE_ENERGY_THRESHOLD = 0.001;
+    let dragging = null;
 
     const lerpColor = (color1, color2, factor) => {
       const parse = (c) => {
-        if (c.startsWith('#')) {
-          const hex = parseInt(c.replace('#', ''), 16);
-          return [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff, 1.0];
-        }
-        if (c.startsWith('hsl')) {
-          // Simple approximation for HSL to RGB if needed, but we'll try to stick to RGB/RGBA for lerping
-          const m = c.match(/hsla?\((\d+),\s*([\d.]+)%,\s*([\d.]+)%(?:,\s*([\d.]+))?\)/);
-          if (m) {
-            const h = parseInt(m[1]) / 360, s = parseInt(m[2]) / 100, l = parseInt(m[3]) / 100;
-            let r, g, b;
-            if (s === 0) r = g = b = l;
-            else {
-              const hue2rgb = (p, q, t) => {
-                if (t < 0) t += 1; if (t > 1) t -= 1;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                return p;
-              };
-              const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-              const p = 2 * l - q;
-              r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
-            }
-            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), m[4] ? parseFloat(m[4]) : 1.0];
-          }
-        }
+        if (c.startsWith('#')) { const hex = parseInt(c.replace('#', ''), 16); return [(hex >> 16) & 0xff, (hex >> 8) & 0xff, hex & 0xff, 1.0]; }
         const m = c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
         return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3]), m[4] ? parseFloat(m[4]) : 1.0] : [255, 255, 255, 1.0];
       };
-      const [r1, g1, b1, a1] = parse(color1);
-      const [r2, g2, b2, a2] = parse(color2);
-      const r = Math.round(r1 + (r2 - r1) * factor);
-      const g = Math.round(g1 + (g2 - g1) * factor);
-      const b = Math.round(b1 + (b2 - b1) * factor);
-      const a = a1 + (a2 - a1) * factor;
-      return `rgba(${r}, ${g}, ${b}, ${a})`;
+      const [r1, g1, b1, a1] = parse(color1), [r2, g2, b2, a2] = parse(color2);
+      return `rgba(${Math.round(r1 + (r2 - r1) * factor)}, ${Math.round(g1 + (g2 - g1) * factor)}, ${Math.round(b1 + (b2 - b1) * factor)}, ${a1 + (a2 - a1) * factor})`;
     };
 
-    const hit = (x, y) => {
-      for (let i = nodes_sim.length - 1; i >= 0; i--) {
-        const n = nodes_sim[i];
-        const influence = n.hoverInfluence || 1.0;
-        const hitWidth = n.width * influence;
-        const hitHeight = n.height * influence;
-        if (Math.abs(x - n.x) < hitWidth/2 && Math.abs(y - n.y) < hitHeight/2) return n;
-      }
-      return null;
+    const getLSDColor = (index, time, velFactor, depth = 1, baseHue = 0) => {
+      if (depth === 0) return velFactor > 0.1 ? lerpColor('#ffffff', '#f0f0f0', velFactor) : '#ffffff';
+      let hue = depth === 1 ? baseHue : (baseHue + Math.sin(time * 0.0005 + index) * 10 + 360) % 360;
+      let s = 0.3, l = 0.7;
+      if (depth === 1) { s = 0.4; l = 0.75; } else if (depth === 2) { s = 0.2; l = 0.65; } else if (depth === 3) { s = 0.1; l = 0.55; }
+      const h = hue / 360, q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+      const f = (t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; };
+      const baseColor = `rgb(${Math.round(f(h+1/3)*255)}, ${Math.round(f(h)*255)}, ${Math.round(f(h-1/3)*255)})`;
+      return velFactor > 0.05 ? lerpColor(baseColor, '#ef4444', velFactor) : baseColor;
     };
 
     const onPointerDown = (e) => {
-      // Don't intercept if clicking an interactive element (link, button, etc)
+      lastInteractionTime.current = performance.now();
       if (e.target.closest('a, button, input, textarea')) return;
-
-      const p = toWorld(getPointer(e));
-      const n = hit(p.x, p.y);
-      if (n) {
-        dragging = n;
-        n.fx = p.x; n.fy = p.y;
+      const rect = canvas.getBoundingClientRect();
+      const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
+      for (let i = nodes_sim_ref.current.length - 1; i >= 0; i--) {
+        const n = nodes_sim_ref.current[i];
+        if (Math.abs(p.x - n.x) < (n.width * (n.hoverInfluence || 1))/2 && Math.abs(p.y - n.y) < (n.height * (n.hoverInfluence || 1))/2) { dragging = n; n.fx = p.x; n.fy = p.y; break; }
       }
     };
     const onPointerMove = (e) => {
-      const p = toWorld(getPointer(e));
-      mousePos.x = p.x;
-      mousePos.y = p.y;
-
-      if (!dragging) return;
-      dragging.fx = p.x; dragging.fy = p.y;
-      // Prevent scrolling when dragging a node
-      if (e.cancelable) e.preventDefault();
+      lastInteractionTime.current = performance.now();
+      const rect = canvas.getBoundingClientRect();
+      const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
+      mousePos.x = p.x; mousePos.y = p.y;
+      if (dragging) { dragging.fx = p.x; dragging.fy = p.y; if (e.cancelable) e.preventDefault(); }
     };
-    const onPointerUp = (e) => {
-      if (dragging) {
-        dragging.fx = null; dragging.fy = null;
-        dragging = null;
-      }
-    };
+    const onPointerUp = () => { if (dragging) { dragging.fx = null; dragging.fy = null; dragging = null; } };
 
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
 
-    const roundRect = (c, x, y, w, h, r) => {
-      c.beginPath();
-      c.moveTo(x + r, y);
-      c.lineTo(x + w - r, y);
-      c.quadraticCurveTo(x + w, y, x + w, y + r);
-      c.lineTo(x + w, y + h - r);
-      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-      c.lineTo(x + r, y + h);
-      c.quadraticCurveTo(x, y + h, x, y + h - r);
-      c.lineTo(x, y + r);
-      c.quadraticCurveTo(x, y, x + r, y);
-      c.closePath();
-    };
-
-    let raf;
-    let isPaused = false;
-
-    const handleVisibilityChange = () => {
-      isPaused = document.hidden;
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    const getLSDColor = (index, time, velFactor, depth = 1, baseHue = 0) => {
-      // Different depths shift at different speeds and offsets
-      let hue;
-      if (depth === 0) {
-        // Root stays clean white
-        const baseColor = '#ffffff';
-        const moveColor = '#f0f0f0'; // Very subtle shift on movement
-        return velFactor > 0.1 ? lerpColor(baseColor, moveColor, velFactor) : baseColor;
-      } else if (depth === 1) {
-        // Categories have a static hue
-        hue = baseHue;
-      } else {
-        // Skill items shift within a very narrow range (+/- 10 degrees)
-        const range = 10;
-        const shift = Math.sin(time * 0.0005 + index) * range;
-        hue = (baseHue + shift + 360) % 360;
-      }
-      
-      // Muted color palette with lower saturation and balanced lightness
-      let s = 0.3, l = 0.7; 
-      if (depth === 0) { s = 0.0; l = 1.0; }
-      else if (depth === 1) { s = 0.4; l = 0.75; } // Muted but distinct
-      else if (depth === 2) { s = 0.2; l = 0.65; } // Very subtle
-      else if (depth === 3) { s = 0.1; l = 0.55; } // Almost monochrome
-      else { s = 0.05; l = 0.45; }
-
-      // Convert HSL to RGB for lerpColor
-      const h = hue / 360;
-      let r, g, b;
-      if (s === 0) r = g = b = l;
-      else {
-        const hue2rgb = (p, q, t) => {
-          if (t < 0) t += 1; if (t > 1) t -= 1;
-          if (t < 1/6) return p + (q - p) * 6 * t;
-          if (t < 1/2) return q;
-          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-          return p;
-        };
-        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        const p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
-      }
-      const baseColor = `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
-      const fastRed = '#ef4444';
-      return velFactor > 0.05 ? lerpColor(baseColor, fastRed, velFactor) : baseColor;
-    };
+    let raf, isPaused = false;
+    document.addEventListener('visibilitychange', () => isPaused = document.hidden);
 
     const animate = () => {
-      if (isPaused) {
-        raf = requestAnimationFrame(animate);
-        return;
-      }
+      if (isPaused) { raf = requestAnimationFrame(animate); return; }
       const now = performance.now();
-
-      // --- Performance Tracking & Dynamic Quality ---
       perfState.current.frameCount++;
-      const timeSinceLastFPS = now - perfState.current.lastTime;
-      if (timeSinceLastFPS >= 1000) {
-        perfState.current.fps = (perfState.current.frameCount * 1000) / timeSinceLastFPS;
-        perfState.current.frameCount = 0;
-        perfState.current.lastTime = now;
-
-        // Adjust samples every second based on FPS
+      if (now - perfState.current.lastTime >= 1000) {
+        perfState.current.fps = (perfState.current.frameCount * 1000) / (now - perfState.current.lastTime);
+        perfState.current.frameCount = 0; perfState.current.lastTime = now;
         if (now - perfState.current.lastAdjustment > 2000) {
-          if (perfState.current.fps < 45 && glState.current.samples > 8) {
-            glState.current.samples = Math.max(8, glState.current.samples - 4);
-            perfState.current.lastAdjustment = now;
-          } else if (perfState.current.fps > 58 && glState.current.samples < 32) {
-            glState.current.samples = Math.min(32, glState.current.samples + 2);
-            perfState.current.lastAdjustment = now;
-          }
+          if (perfState.current.fps < 45 && glState.current.samples > 4) glState.current.samples -= 2;
+          else if (perfState.current.fps > 58 && glState.current.samples < 16) glState.current.samples += 2;
+          perfState.current.lastAdjustment = now;
         }
       }
 
-      // Update DOM repel points every frame to match WebGL FPS
       updateRepelPoints();
-
-      // Step Physics
-      nodes_sim.forEach(n => { 
-        n.ax = 0; n.ay = 0; 
-        
-        // Gaussian Hover Influence
-        const dx = n.x - mousePos.x;
-        const dy = n.y - mousePos.y;
-        const dist = Math.hypot(dx, dy);
-        const sigma = 200; // Spread of influence
-        const amp = 1.0; // Maximum additional scale
-        n.hoverInfluence = 1.0 + amp * Math.exp(-(dist * dist) / (2 * sigma * sigma));
-      });
+      const nodes = nodes_sim_ref.current;
+      nodes.forEach(n => { n.ax = 0; n.ay = 0; n.hoverInfluence = 1.0 + Math.exp(-(Math.hypot(n.x-mousePos.x, n.y-mousePos.y)**2) / (2 * 200 * 200)); });
 
       links_sim.forEach(l => {
-        const dx = l.target.x - l.source.x;
-        const dy = l.target.y - l.source.y;
-        const dist = Math.hypot(dx, dy) || 1;
-        const force = springK * (dist - l.rest);
-        l.source.ax += force * (dx / dist);
-        l.source.ay += force * (dy / dist);
-        l.target.ax -= force * (dx / dist);
-        l.target.ay -= force * (dx / dist);
+        const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, dist = Math.hypot(dx, dy) || 1, force = springK * (dist - l.rest);
+        l.source.ax += force * (dx/dist); l.source.ay += force * (dy/dist);
+        l.target.ax -= force * (dx/dist); l.target.ay -= force * (dy/dist);
       });
 
-      for (let i = 0; i < nodes_sim.length; i++) {
-        const a = nodes_sim[i];
-        
-        // Node-Node Repulsion & Hierarchy-specific forces
-        for (let j = i + 1; j < nodes_sim.length; j++) {
-          const b = nodes_sim[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist2 = Math.max(36, dx*dx + dy*dy);
-          const dist = Math.sqrt(dist2);
-          
-          let currentCharge = charge * a.hoverInfluence * b.hoverInfluence;
-
-          // 1. Massive repulsion for the root node (Level 0)
-          if (a.depth === 0 || b.depth === 0) {
-            currentCharge = (charge * 30.0) * a.hoverInfluence * b.hoverInfluence; 
-          }
-          // 2. Very strong repulsion between skill categories (Level 1)
-          else if (a.depth === 1 && b.depth === 1) {
-            currentCharge = (charge * 12.0) * a.hoverInfluence * b.hoverInfluence; 
-          }
-          // 3. Attraction between sibling nodes (Level 2+) with a minimum distance
+      for (let i = 0; i < nodes.length; i++) {
+        const a = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const b = nodes[j];
+          const dx = b.x - a.x, dy = b.y - a.y, dist2 = Math.max(36, dx*dx + dy*dy), dist = Math.sqrt(dist2);
+          let currCharge = charge * a.hoverInfluence * b.hoverInfluence;
+          if (a.depth === 0 || b.depth === 0) currCharge *= 30;
+          else if (a.depth === 1 && b.depth === 1) currCharge *= 12;
           else if (a.depth >= 2 && b.depth >= 2 && a.parent === b.parent) {
-            // Use a spring-like force with a rest length to ensure readability
-            const restLength = a.depth === 2 ? 100 : 60; 
-            const k = 0.1; 
-            const force = k * (dist - restLength);
-            const fx = force * (dx / dist);
-            const fy = force * (dy / dist);
-            a.ax += fx; a.ay += fy;
-            b.ax -= fx; b.ay -= fy;
-            continue; // Skip the standard repulsion logic
+            const force = 0.1 * (dist - (a.depth === 2 ? 100 : 60));
+            a.ax += force * (dx/dist); a.ay += force * (dy/dist); b.ax -= force * (dx/dist); b.ay -= force * (dy/dist); continue;
           }
-          
-          const force = currentCharge / dist2;
-          const fx = force * (dx / dist);
-          const fy = force * (dy / dist);
-          a.ax -= fx; a.ay -= fy;
-          b.ax += fx; b.ay += fy;
+          const force = currCharge / dist2; a.ax -= force * (dx/dist); a.ay -= force * (dy/dist); b.ax += force * (dx/dist); b.ay += force * (dy/dist);
         }
-
-        // DOM Element Repulsion
-        const nodeX = a.x;
-        const nodeY = a.y;
-        
-        repelPoints.forEach(p => {
-          // Convert DOM screen space to simulation world space
-          const px = (p.x - view.x) / view.scale;
-          const py = (p.y - view.y) / view.scale;
-          
-          const dx = nodeX - px;
-          const dy = nodeY - py;
-          const d2 = dx * dx + dy * dy;
-          
-          const pw = p.w / view.scale;
-          const ph = p.h / view.scale;
-          const minDist = Math.max(pw, ph) / 2 + 30;
-          const minDist2 = minDist * minDist;
-
-          if (d2 < minDist2) {
-            const dist = Math.sqrt(d2) || 1;
-            const force = (domRepelK * (1 - dist / minDist)) / dist;
-            a.ax += dx * force;
-            a.ay += dy * force;
-          }
+        repelPoints.current.forEach(p => {
+          const dx = a.x - (p.x - view.x)/view.scale, dy = a.y - (p.y - view.y)/view.scale;
+          const d2 = dx*dx + dy*dy, minDist = Math.max(p.w, p.h)/view.scale/2 + 30;
+          if (d2 < minDist*minDist) { const d = Math.sqrt(d2) || 1, force = (domRepelK * (1 - d/minDist))/d; a.ax += dx*force; a.ay += dy*force; }
         });
-
-        // Edge Repulsion
-        // Convert node world pos to screen pos for edge check
-        const screenX = a.x * view.scale + view.x;
-        const screenY = a.y * view.scale + view.y;
-        
-        if (screenX < edgeMargin) {
-          const force = (edgeRepelK * (1 - screenX / edgeMargin)) / view.scale;
-          a.ax += force;
-        } else if (screenX > width - edgeMargin) {
-          const force = (edgeRepelK * (1 - (width - screenX) / edgeMargin)) / view.scale;
-          a.ax -= force;
-        }
-        
-        if (screenY < edgeMargin) {
-          const force = (edgeRepelK * (1 - screenY / edgeMargin)) / view.scale;
-          a.ay += force;
-        } else if (screenY > height - edgeMargin) {
-          const force = (edgeRepelK * (1 - (height - screenY) / edgeMargin)) / view.scale;
-          a.ay -= force;
-        }
+        const sx = a.x * view.scale + view.x, sy = a.y * view.scale + view.y;
+        if (sx < edgeMargin) a.ax += (edgeRepelK * (1 - sx/edgeMargin))/view.scale; else if (sx > width - edgeMargin) a.ax -= (edgeRepelK * (1 - (width-sx)/edgeMargin))/view.scale;
+        if (sy < edgeMargin) a.ay += (edgeRepelK * (1 - sy/edgeMargin))/view.scale; else if (sy > height - edgeMargin) a.ay -= (edgeRepelK * (1 - (height-sy)/edgeMargin))/view.scale;
       }
 
-      const isDesktop = width >= 768;
-      const sidebarWidth = (isDesktop && !focusModeRef.current) ? 320 : 0;
-      const cx = (width + sidebarWidth) / 2, cy = height / 2;
-      nodes_sim.forEach((n, i) => {
-        // Base centering force
-        n.ax += (cx - n.x) * centerK;
-        // Apply stronger centering on Y to keep the layout flat
-        n.ay += (cy - n.y) * (centerK * 4.0);
-
-        // Hover-based pulling force to center
-        if (n.hoverInfluence > 1.0) {
-          const hoverPullK = 0.08; // Additional pulling strength
-          const pullStrength = (n.hoverInfluence - 1.0) * hoverPullK;
-          n.ax += (cx - n.x) * pullStrength;
-          n.ay += (cy - n.y) * pullStrength;
-        }
-
-        if (n.fx !== null) { n.x = n.fx; n.vx = 0; }
-        if (n.fy !== null) { n.y = n.fy; n.vy = 0; }
-        n.vx = (n.vx + n.ax) * damping;
-        n.vy = (n.vy + n.ay) * damping;
-        
-        if (n.vx > maxVelocity) n.vx = maxVelocity; else if (n.vx < -maxVelocity) n.vx = -maxVelocity;
-        if (n.vy > maxVelocity) n.vy = maxVelocity; else if (n.vy < -maxVelocity) n.vy = -maxVelocity;
-        if (n.fx === null) n.x += n.vx;
-        if (n.fy === null) n.y += n.vy;
+      const cx = (width + (width >= 768 && !focusModeRef.current ? 320 : 0))/2, cy = height/2;
+      nodes.forEach(n => {
+        n.ax += (cx - n.x) * centerK; n.ay += (cy - n.y) * (centerK * 4);
+        if (n.hoverInfluence > 1) { n.ax += (cx - n.x) * (n.hoverInfluence-1) * 0.08; n.ay += (cy - n.y) * (n.hoverInfluence-1) * 0.08; }
+        if (n.fx !== null) { n.x = n.fx; n.vx = 0; } if (n.fy !== null) { n.y = n.fy; n.vy = 0; }
+        n.vx = (n.vx + n.ax) * damping; n.vy = (n.vy + n.ay) * damping;
+        if (Math.abs(n.vx) > maxVelocity) n.vx = Math.sign(n.vx) * maxVelocity;
+        if (Math.abs(n.vy) > maxVelocity) n.vy = Math.sign(n.vy) * maxVelocity;
+        if (n.fx === null) n.x += n.vx; if (n.fy === null) n.y += n.vy;
       });
 
-      // View spring towards fit-to-bounds
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      nodes_sim.forEach(n => {
-        minX = Math.min(minX, n.x - n.width/2);
-        maxX = Math.max(maxX, n.x + n.width/2);
-        minY = Math.min(minY, n.y - n.height/2);
-        maxY = Math.max(maxY, n.y + n.height/2);
-      });
-      const margin = 100;
-      const vMargin = 250; // Larger vertical margin to discourage vertical expansion
-      const worldW = maxX - minX || 100;
-      const worldH = maxY - minY || 100;
-      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - sidebarWidth - margin*2) / worldW, (height - vMargin*2) / worldH)));
-      const targetX = (width + sidebarWidth) / 2 - targetScale * (minX + maxX) / 2;
-      const targetY = height / 2 - targetScale * (minY + maxY) / 2;
-
-      view.vx = (view.vx + (targetX - view.x) * viewSpringK) * viewDamping;
-      view.vy = (view.vy + (targetY - view.y) * viewSpringK) * viewDamping;
-      view.vs = (view.vs + (targetScale - view.scale) * viewSpringK) * viewDamping;
+      nodes.forEach(n => { minX = Math.min(minX, n.x - n.width/2); maxX = Math.max(maxX, n.x + n.width/2); minY = Math.min(minY, n.y - n.height/2); maxY = Math.max(maxY, n.y + n.height/2); });
+      const targetScale = Math.max(0.6, Math.min(1.5, Math.min((width - (width >= 768 && !focusModeRef.current ? 320 : 0) - 200)/(maxX-minX||100), (height-500)/(maxY-minY||100))));
+      const targetX = (width + (width >= 768 && !focusModeRef.current ? 320 : 0))/2 - targetScale * (minX+maxX)/2, targetY = height/2 - targetScale * (minY+maxY)/2;
+      view.vx = (view.vx + (targetX - view.x) * viewSpringK) * viewDamping; view.vy = (view.vy + (targetY - view.y) * viewSpringK) * viewDamping; view.vs = (view.vs + (targetScale - view.scale) * viewSpringK) * viewDamping;
       view.x += view.vx; view.y += view.vy; view.scale += view.vs;
 
-      // Calculate System Energy (for visual effects)
-      let totalVel = 0;
-      nodes_sim.forEach(n => totalVel += Math.hypot(n.vx, n.vy));
-      const energy = Math.min(1.0, totalVel / (nodes_sim.length * 2.0));
+      let totalVel = 0; nodes.forEach(n => totalVel += Math.hypot(n.vx, n.vy));
+      const energy = Math.min(1.0, totalVel / (nodes.length * 2.0));
+      if (energy < STABLE_ENERGY_THRESHOLD && now - lastInteractionTime.current > 3000 && !dragging) { raf = requestAnimationFrame(animate); return; }
 
-      // Draw Main Canvas
-      const colors = getThemeColors();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); 
-      ctx.clearRect(0, 0, width, height);
-      
-      ctx.save();
-      ctx.translate(view.x, view.y);
-      ctx.scale(view.scale, view.scale);
-
-      // Links
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      const ctx2d = glState.current.offscreenCtx || canvas.getContext('2d');
+      ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0); ctx2d.clearRect(0, 0, width, height);
+      ctx2d.save(); ctx2d.translate(view.x, view.y); ctx2d.scale(view.scale, view.scale);
       links_sim.forEach((l, idx) => {
-        const vel = (Math.hypot(l.source.vx, l.source.vy) + Math.hypot(l.target.vx, l.target.vy)) / 2;
-        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4));
-        const lsdColor = getLSDColor(idx, now, velFactor, l.target.depth, l.target.baseHue);
-        
-        // Helper to safely set alpha on both rgb and rgba strings
-        const setAlpha = (color, alpha) => {
-          if (color.startsWith('rgba')) {
-            return color.replace(/,[\s\d.]+\)$/, `, ${alpha})`);
-          }
-          return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
-        };
-        
-        // Calculate organic curve control point (pull towards center)
-        const midX = (l.source.x + l.target.x) / 2;
-        const midY = (l.source.y + l.target.y) / 2;
-        const pull = 0.15; // How much to pull toward center
-        const cpX = midX + (cx - midX) * pull;
-        const cpY = midY + (cy - midY) * pull;
-
-        // Hierarchical width
-        const baseWidth = l.source.depth === 0 ? 3.0 : (l.source.depth === 1 ? 1.5 : 0.8);
-        const scaleAdjustedWidth = baseWidth / view.scale;
-
-        ctx.beginPath();
-        ctx.moveTo(l.source.x, l.source.y);
-        ctx.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
-
-        // Pass 1: The "Aura" (Soft anti-aliasing glow)
-        ctx.strokeStyle = setAlpha(lsdColor, 0.08);
-        ctx.lineWidth = scaleAdjustedWidth * 4;
-        ctx.stroke();
-
-        // Pass 2: The "Core" (Sharp connection)
-        ctx.strokeStyle = setAlpha(lsdColor, 0.3);
-        ctx.lineWidth = scaleAdjustedWidth;
-        ctx.stroke();
+        const color = getLSDColor(idx, now, Math.min(1, (Math.hypot(l.source.vx, l.source.vy)+Math.hypot(l.target.vx, l.target.vy))/2/(maxVelocity*0.4)), l.target.depth, l.target.baseHue);
+        const setAlpha = (c, a) => c.startsWith('rgba') ? c.replace(/,[\s\d.]+\)$/, `, ${a})`) : c.replace('rgb', 'rgba').replace(')', `, ${a})`);
+        const midX = (l.source.x + l.target.x)/2, midY = (l.source.y + l.target.y)/2, cpX = midX + (cx - midX) * 0.15, cpY = midY + (cy - midY) * 0.15, w = (l.source.depth === 0 ? 3 : (l.source.depth === 1 ? 1.5 : 0.8))/view.scale;
+        ctx2d.lineCap = 'round'; ctx2d.lineJoin = 'round'; ctx2d.beginPath(); ctx2d.moveTo(l.source.x, l.source.y); ctx2d.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
+        ctx2d.strokeStyle = setAlpha(color, 0.08); ctx2d.lineWidth = w * 4; ctx2d.stroke();
+        ctx2d.strokeStyle = setAlpha(color, 0.3); ctx2d.lineWidth = w; ctx2d.stroke();
       });
-
-      // Nodes
-      nodes_sim.forEach((n, idx) => {
-        // Velocity-dependent color shift
-        const vel = Math.hypot(n.vx, n.vy);
-        const velFactor = Math.min(1.0, vel / (maxVelocity * 0.4));
-        
-        const nodeColor = getLSDColor(idx, now, velFactor, n.depth, n.baseHue);
-        
-        // Draw Nucleus
-        if (n.depth !== 0) {
-          ctx.fillStyle = nodeColor;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, (1.5 * n.hoverInfluence) / view.scale, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Add glow for active/fast nodes
-          if (velFactor > 0.2) {
-            ctx.shadowBlur = 10 * velFactor * n.hoverInfluence;
-            ctx.shadowColor = nodeColor;
-          }
-        }
-
-        // Label Presentation (Offset above nucleus)
-        ctx.strokeStyle = '#ff0000'; // Red border
-        ctx.lineJoin = 'round';
-        
+      nodes.forEach((n, idx) => {
+        const color = getLSDColor(idx, now, Math.min(1, Math.hypot(n.vx, n.vy)/(maxVelocity*0.4)), n.depth, n.baseHue);
+        if (n.depth !== 0) { ctx2d.fillStyle = color; ctx2d.beginPath(); ctx2d.arc(n.x, n.y, (1.5 * n.hoverInfluence)/view.scale, 0, Math.PI*2); ctx2d.fill(); }
+        ctx2d.strokeStyle = '#ff0000'; ctx2d.lineJoin = 'round';
         if (n.depth === 0) {
-          const baseFontSize = window.innerWidth < 768 ? 60 : 120;
-          const fontSize = baseFontSize * n.hoverInfluence;
-          ctx.font = `bold ${fontSize}px "Inter"`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.letterSpacing = '-4px';
-          
-          ctx.lineWidth = 4 * n.hoverInfluence;
-          ctx.strokeText(n.name.toUpperCase(), n.x, n.y);
-          ctx.fillText(n.name.toUpperCase(), n.x, n.y);
-          
-          ctx.letterSpacing = '0px';
+          ctx2d.font = `bold ${(window.innerWidth < 768 ? 60 : 120) * n.hoverInfluence}px "Inter"`; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle'; ctx2d.letterSpacing = '-4px';
+          ctx2d.lineWidth = 4 * n.hoverInfluence; ctx2d.strokeText(n.name.toUpperCase(), n.x, n.y); ctx2d.fillText(n.name.toUpperCase(), n.x, n.y); ctx2d.letterSpacing = '0px';
         } else {
-          const baseFontSize = window.innerWidth < 768 ? 16 : 12;
-          const fontSize = baseFontSize * n.hoverInfluence;
-          ctx.font = `bold ${fontSize}px "Inter"`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'bottom';
-          
-          ctx.lineWidth = 2 * n.hoverInfluence;
-          ctx.strokeText(n.name, n.x, n.y - (10 / view.scale));
-          ctx.fillText(n.name, n.x, n.y - (10 / view.scale));
+          ctx2d.font = `bold ${(window.innerWidth < 768 ? 16 : 12) * n.hoverInfluence}px "Inter"`; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'bottom';
+          ctx2d.lineWidth = 2 * n.hoverInfluence; ctx2d.strokeText(n.name, n.x, n.y - 10/view.scale); ctx2d.fillText(n.name, n.x, n.y - 10/view.scale);
         }
-        
-        ctx.shadowBlur = 0;
       });
-      ctx.restore();
+      ctx2d.restore();
 
-      // --- WebGL Post-Processing ---
       if (glState.current.gl) {
         const { gl, program, texture, buffer, offscreenCanvas } = glState.current;
-        
-        gl.useProgram(program);
-        
-        // Upload 2D canvas to texture using faster texSubImage2D
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, offscreenCanvas);
-        
-        // Set uniforms
-        const resLoc = gl.getUniformLocation(program, 'uResolution');
-        gl.uniform2f(resLoc, offscreenCanvas.width, offscreenCanvas.height);
-        
-        const radLoc = gl.getUniformLocation(program, 'uRadius');
-        // Pulse radius slightly with energy (reduced intensity)
-        gl.uniform1f(radLoc, (10.0 + energy * 20.0) * dpr); 
-
-        const scrollBlurLoc = gl.getUniformLocation(program, 'uScrollBlur');
-        const scrollFactor = Math.min(window.scrollY / 800, 1.0);
-        gl.uniform1f(scrollBlurLoc, scrollFactor * 40.0 * dpr);
-        
-        const energyLoc = gl.getUniformLocation(program, 'uEnergy');
-        gl.uniform1f(energyLoc, energy);
-        
-        const timeLoc = gl.getUniformLocation(program, 'uTime');
-        gl.uniform1f(timeLoc, performance.now() / 1000.0);
-        
-        const samplesLoc = gl.getUniformLocation(program, 'uSamples');
-        gl.uniform1i(samplesLoc, glState.current.samples);
-        
-        const posLoc = gl.getAttribLocation(program, 'position');
-        gl.enableVertexAttribArray(posLoc);
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        
+        gl.useProgram(program); gl.bindTexture(gl.TEXTURE_2D, texture); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, offscreenCanvas);
+        gl.uniform2f(gl.getUniformLocation(program, 'uResolution'), offscreenCanvas.width, offscreenCanvas.height);
+        gl.uniform1f(gl.getUniformLocation(program, 'uRadius'), (10 + energy * 20) * dpr);
+        gl.uniform1f(gl.getUniformLocation(program, 'uScrollBlur'), Math.min(window.scrollY/800, 1) * 40 * dpr);
+        gl.uniform1f(gl.getUniformLocation(program, 'uEnergy'), energy);
+        gl.uniform1f(gl.getUniformLocation(program, 'uTime'), performance.now()/1000);
+        gl.uniform1i(gl.getUniformLocation(program, 'uSamples'), glState.current.samples);
+        const posLoc = gl.getAttribLocation(program, 'position'); gl.enableVertexAttribArray(posLoc);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
-      
       raf = requestAnimationFrame(animate);
     };
     animate();
@@ -960,7 +481,6 @@ const SkillsGraph2D = () => {
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(raf);
     };
   }, [theme]);
