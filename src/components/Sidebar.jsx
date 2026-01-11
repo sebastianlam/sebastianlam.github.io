@@ -1,20 +1,19 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { cvData } from '../data/cvData';
-import { Sun, Moon, Maximize2, Type, Github, Linkedin, Mail, Volume2, VolumeX, FileText } from 'lucide-react';
-import { useReadAloud } from '../hooks/useReadAloud';
+import { Maximize2, Github, Linkedin, Mail, FileText } from 'lucide-react';
 
 const Sidebar = () => {
-  const { theme, setTheme, setFocusMode } = useApp();
-  const { isReading, toggle } = useReadAloud();
-
-  const handleReadAloud = () => {
-    const text = `Jim Lam, Software Engineer. ${cvData.experience.map(e => `${e.role} at ${e.company}`).join('. ')}`;
-    toggle(text);
-  };
+  const { setFocusMode } = useApp();
 
   return (
-    <aside className="hidden md:flex w-full h-full p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 md:sidebar-fade-mask">
+    <aside 
+      className="hidden md:flex h-full p-8 flex-col justify-between border-b md:border-b-0 md:border-r border-white/20 bg-black/50 backdrop-blur-md z-50 ml-[-2000px] pl-[calc(2000px+2rem)] w-[calc(100%+2000px)]"
+      style={{
+        maskImage: 'linear-gradient(to right, black 0px, black calc(100% - 256px), rgba(0,0,0,0.5) calc(100% - 160px), transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to right, black 0px, black calc(100% - 256px), rgba(0,0,0,0.5) calc(100% - 160px), transparent 100%)'
+      }}
+    >
       <div>
         <header className="mb-12">
           <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
@@ -35,31 +34,25 @@ const Sidebar = () => {
 
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white mb-4">Controls</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             <button 
               onClick={() => setFocusMode(true)}
-              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white"
+              className="px-4 py-3 border border-white/20 hover:bg-white hover:text-black transition-colors text-white flex items-center gap-4 w-full"
               title="Focus Mode"
               aria-label="Enter focus mode"
             >
-              <Maximize2 size={14} />
-            </button>
-            <button 
-              onClick={handleReadAloud}
-              className={`p-2 border border-white/20 hover:bg-white hover:text-black transition-colors ${isReading ? 'bg-white text-black' : 'text-white'}`}
-              title="Read Aloud"
-              aria-label={isReading ? "Stop reading aloud" : "Read page content aloud"}
-            >
-              {isReading ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              <Maximize2 size={16} />
+              <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Focus Mode</span>
             </button>
             <a 
               href={cvData.personal.cv} 
               download="Jim_Lam_CV.pdf"
-              className="p-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white flex items-center justify-center"
+              className="px-4 py-3 border border-white/20 hover:bg-white hover:text-black transition-colors text-white flex items-center gap-4 w-full"
               title="Download CV"
               aria-label="Download CV PDF"
             >
-              <FileText size={14} />
+              <FileText size={16} />
+              <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Download CV</span>
             </a>
           </div>
         </div>
