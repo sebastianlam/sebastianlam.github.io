@@ -22,31 +22,41 @@ export const cvData = {
     { name: "Shell Scripting", category: "Languages", level: 85 },
 
     // AI & Computer Vision
-    { name: "Computer Vision", category: "AI & Computer Vision", level: 85, children: [
-      { name: "YOLO", level: 90 },
-      { name: "Synthetic Data (Blender API)", level: 85 },
-      { name: "PySide6", level: 80 }
-    ]},
-    { name: "LLM Orchestration", category: "AI & Computer Vision", level: 80, children: [
-      { name: "TTS / STT", level: 85 },
-      { name: "Voice Interfaces", level: 80 }
-    ]},
-    { name: "Data Analytics", category: "AI & Computer Vision", level: 80, children: [
-      { name: "Data Visualisation", level: 85 },
-      { name: "Forecasting", level: 80 },
-      { name: "Anomaly Detection", level: 75 }
-    ]},
+    {
+      name: "Computer Vision", category: "AI & Computer Vision", level: 85, children: [
+        { name: "YOLO", level: 90 },
+        { name: "Synthetic Data (Blender API)", level: 85 },
+        { name: "PySide6", level: 80 }
+      ]
+    },
+    {
+      name: "LLM Orchestration", category: "AI & Computer Vision", level: 80, children: [
+        { name: "TTS / STT", level: 85 },
+        { name: "Voice Interfaces", level: 80 }
+      ]
+    },
+    {
+      name: "Data Analytics", category: "AI & Computer Vision", level: 80, children: [
+        { name: "Data Visualisation", level: 85 },
+        { name: "Forecasting", level: 80 },
+        { name: "Anomaly Detection", level: 75 }
+      ]
+    },
 
     // Specialised Engineering
-    { name: "Space Systems", category: "Specialised Engineering", level: 85, children: [
-      { name: "Telemetry & Tracking (TT&C)", level: 90 },
-      { name: "Link Resilience", level: 85 },
-      { name: "Satellite Design", level: 80 }
-    ]},
-    { name: "Payment Systems", category: "Specialised Engineering", level: 80, children: [
-      { name: "EMVco / VISA L2 Testing", level: 85 },
-      { name: "Contactless Schemes", level: 80 }
-    ]},
+    {
+      name: "Space Systems", category: "Specialised Engineering", level: 85, children: [
+        { name: "Telemetry & Tracking (TT&C)", level: 90 },
+        { name: "Link Resilience", level: 85 },
+        { name: "Satellite Design", level: 80 }
+      ]
+    },
+    {
+      name: "Payment Systems", category: "Specialised Engineering", level: 80, children: [
+        { name: "EMVco / VISA L2 Testing", level: 85 },
+        { name: "Contactless Schemes", level: 80 }
+      ]
+    },
     { name: "Fintech", category: "Specialised Engineering", level: 85 },
 
     // Web & Mobile
@@ -57,17 +67,21 @@ export const cvData = {
     { name: "Tailwind CSS", category: "Web & Mobile", level: 90 },
 
     // Infrastructure
-    { name: "AWS", category: "Infrastructure", level: 80, children: [
-      { name: "EC2", level: 85 },
-      { name: "S3", level: 90 }
-    ]},
+    {
+      name: "AWS", category: "Infrastructure", level: 80, children: [
+        { name: "EC2", level: 85 },
+        { name: "S3", level: 90 }
+      ]
+    },
     { name: "Backend Architecture", category: "Infrastructure", level: 85 },
 
     // Design & 3D
-    { name: "3D Modelling", category: "Design & 3D", level: 85, children: [
-      { name: "Blender", level: 90 },
-      { name: "Rhino / Grasshopper", level: 85 }
-    ]},
+    {
+      name: "3D Modelling", category: "Design & 3D", level: 85, children: [
+        { name: "Blender", level: 90 },
+        { name: "Rhino / Grasshopper", level: 85 }
+      ]
+    },
     { name: "Figma", category: "Design & 3D", level: 85 },
   ],
   languages: [

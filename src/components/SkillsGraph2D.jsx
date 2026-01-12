@@ -31,6 +31,13 @@ const SkillsGraph2D = () => {
   const screenMouseRef = useRef({ x: 0.5, y: 0.5 });
   const cachedRepelPoints = useRef([]);
   const lastScrollY = useRef(0);
+  const rootImageRef = useRef(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = '/root-node.png';
+    img.onload = () => { rootImageRef.current = img; };
+  }, []);
 
   const getThemeColors = () => {
     return {
@@ -229,9 +236,11 @@ const SkillsGraph2D = () => {
       if (nodes_sim_ref.current && nodes_sim_ref.current.length > 0) {
         const isMobile = width < 768;
         const newName = isMobile ? "Skills" : cvData.personal.name;
-        if (nodes_sim_ref.current[0].name !== newName) {
-          nodes_sim_ref.current[0].name = newName;
-          nodes_sim_ref.current[0].width = measureLabelWidth(newName, 0);
+        const rootNode = nodes_sim_ref.current.find(n => n.depth === 0);
+        if (rootNode && rootNode.name !== newName) {
+          rootNode.name = newName;
+          rootNode.width = isMobile ? 120 : 200;
+          rootNode.height = isMobile ? 120 : 200;
         }
       }
 
@@ -254,12 +263,17 @@ const SkillsGraph2D = () => {
       const root = { name: isMobile ? "Skills" : cvData.personal.name, children: [] };
       const categories = {};
       const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
-      const mapSkill = (skill, baseHue) => ({ name: skill.name, baseHue, children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : [] });
+      const mapSkill = (skill, baseHue) => ({ 
+        name: skill.name, 
+        level: skill.level,
+        baseHue, 
+        children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : [] 
+      });
       cvData.skills.forEach(skill => {
         if (!categories[skill.category]) {
           const catIndex = uniqueCats.indexOf(skill.category);
           const baseHue = (catIndex / uniqueCats.length) * 360;
-          categories[skill.category] = { name: skill.category, children: [], baseHue };
+          categories[skill.category] = { name: skill.category, children: [], baseHue, level: 80 }; // Default level for categories
           root.children.push(categories[skill.category]);
         }
         categories[skill.category].children.push(mapSkill(skill, categories[skill.category].baseHue));
@@ -271,7 +285,7 @@ const SkillsGraph2D = () => {
       const nodeSizeY = options.nodeHeight || 40, nodeSizeX = options.nodeWidth || 140;
       const nodes = [], links = [], depthToLeaves = new Map();
       function walk(node, depth, parent) {
-        const current = { node, depth, x: 0, y: depth * nodeSizeY, parent: null, baseHue: node.baseHue || 0 };
+        const current = { node, depth, x: 0, y: depth * nodeSizeY, parent: null, baseHue: node.baseHue || 0, level: node.level || 70 };
         if (parent) current.parent = parent;
         if (!node.children || node.children.length === 0) {
           const idx = (depthToLeaves.get(depth) || 0); depthToLeaves.set(depth, idx + 1);
@@ -293,7 +307,7 @@ const SkillsGraph2D = () => {
     const rootFixed = { x: 200, y: 150 };
     
     nodes_sim_ref.current = layout.nodes.map(n => {
-      const label = n.node.name, w = measureLabelWidth(label, n.depth);
+      const label = n.node.name, w = n.depth === 0 ? 200 : measureLabelWidth(label, n.depth);
       let initX, initY;
       if (n.depth === 0) { initX = rootFixed.x; initY = rootFixed.y; }
       else {
@@ -302,7 +316,7 @@ const SkillsGraph2D = () => {
         initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * 10;
         initY = rootFixed.y + Math.sin(angle) * distance * 0.6 + (Math.random() - 0.5) * 10;
       }
-      return { name: label, depth: n.depth, parent: n.parent, baseHue: n.baseHue, x: initX, y: initY, vx: 0, vy: 0, ax: 0, ay: 0, width: w, height: n.depth === 0 ? 80 : 16, fx: null, fy: null, color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff')) };
+      return { name: label, depth: n.depth, level: n.level, parent: n.parent, baseHue: n.baseHue, x: initX, y: initY, vx: 0, vy: 0, ax: 0, ay: 0, width: w, height: n.depth === 0 ? 200 : 16, fx: null, fy: null, color: n.depth === 1 ? '#bef264' : (n.depth === 2 ? '#86efac' : (n.depth === 3 ? '#93c5fd' : '#ffffff')) };
     });
 
     const links_sim = layout.links.map(l => ({ source: nodes_sim_ref.current[layout.nodes.indexOf(l.source)], target: nodes_sim_ref.current[layout.nodes.indexOf(l.target)], rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40 }));
@@ -417,7 +431,8 @@ const SkillsGraph2D = () => {
         for (let j = i + 1; j < nodes.length; j++) {
           const b = nodes[j];
           const dx = b.x - a.x, dy = b.y - a.y, dist2 = Math.max(36, dx*dx + dy*dy), dist = Math.sqrt(dist2);
-          let currCharge = charge * a.hoverInfluence * b.hoverInfluence;
+          const levelFactor = ((a.level || 70) / 85) * ((b.level || 70) / 85);
+          let currCharge = charge * a.hoverInfluence * b.hoverInfluence * levelFactor;
           if (a.depth === 0 || b.depth === 0) currCharge *= 30;
           else if (a.depth === 1 && b.depth === 1) currCharge *= 25; // Even more space between categories
           else if (a.parent !== b.parent) {
@@ -479,7 +494,9 @@ const SkillsGraph2D = () => {
         if (n.depth !== 0) { 
           ctx2d.fillStyle = color; 
           ctx2d.beginPath(); 
-          ctx2d.arc(n.x, n.y, (1.8 * n.hoverInfluence)/view.scale, 0, Math.PI*2); 
+          const baseSize = n.depth === 1 ? 2.5 : (n.depth === 2 ? 1.8 : 1.2);
+          const dotSize = ((n.level || 70) / 85) * baseSize;
+          ctx2d.arc(n.x, n.y, (dotSize * n.hoverInfluence)/view.scale, 0, Math.PI*2); 
           ctx2d.fill(); 
         }
 
@@ -488,16 +505,24 @@ const SkillsGraph2D = () => {
         ctx2d.lineJoin = 'round';
         
         if (n.depth === 0) {
-          const fontSize = (window.innerWidth < 768 ? 50 : 100) * n.hoverInfluence;
-          ctx2d.font = `900 ${fontSize}px "Inter", sans-serif`; 
-          ctx2d.textAlign = 'center'; 
-          ctx2d.textBaseline = 'middle'; 
-          ctx2d.letterSpacing = '-2px';
-          ctx2d.lineWidth = 6 * n.hoverInfluence; 
-          ctx2d.strokeText(n.name.toUpperCase(), n.x, n.y); 
-          ctx2d.fillStyle = '#ffffff';
-          ctx2d.fillText(n.name.toUpperCase(), n.x, n.y); 
-          ctx2d.letterSpacing = '0px';
+          if (rootImageRef.current) {
+            const size = (window.innerWidth < 768 ? 120 : 200) * n.hoverInfluence;
+            const aspect = rootImageRef.current.width / rootImageRef.current.height;
+            const h = size;
+            const w = size * aspect;
+            ctx2d.drawImage(rootImageRef.current, n.x - w/2, n.y - h/2, w, h);
+          } else {
+            const fontSize = (window.innerWidth < 768 ? 50 : 100) * n.hoverInfluence;
+            ctx2d.font = `900 ${fontSize}px "Inter", sans-serif`; 
+            ctx2d.textAlign = 'center'; 
+            ctx2d.textBaseline = 'middle'; 
+            ctx2d.letterSpacing = '-2px';
+            ctx2d.lineWidth = 6 * n.hoverInfluence; 
+            ctx2d.strokeText(n.name.toUpperCase(), n.x, n.y); 
+            ctx2d.fillStyle = '#ffffff';
+            ctx2d.fillText(n.name.toUpperCase(), n.x, n.y); 
+            ctx2d.letterSpacing = '0px';
+          }
         } else {
           const fontSize = (window.innerWidth < 768 ? 14 : 11) * n.hoverInfluence;
           ctx2d.font = `600 ${fontSize}px "Inter", sans-serif`; 
