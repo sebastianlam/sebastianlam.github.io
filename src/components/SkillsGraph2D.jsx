@@ -17,7 +17,7 @@ const SkillsGraph2D = () => {
     buffer: null,
     offscreenCanvas: null,
     offscreenCtx: null,
-    samples: 16, // Current dynamic samples
+    samples: 32, // Start with higher quality
   });
 
   const perfState = useRef({
@@ -28,6 +28,7 @@ const SkillsGraph2D = () => {
   });
 
   const lastInteractionTime = useRef(performance.now());
+  const screenMouseRef = useRef({ x: 0.5, y: 0.5 });
   const cachedRepelPoints = useRef([]);
   const lastScrollY = useRef(0);
 
@@ -85,9 +86,10 @@ const SkillsGraph2D = () => {
           uniform float uScrollBlur;
           uniform float uTime;
           uniform int uSamples;
+          uniform vec2 uMouse;
           float random(vec2 uv) { return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453); }
           void main() {
-            vec2 center = vec2(0.5, 0.5);
+            vec2 center = uMouse;
             float dist = distance(vUv, center);
             float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
             if (blurAmount < 0.2) {
@@ -107,13 +109,13 @@ const SkillsGraph2D = () => {
             float total = 0.0;
             float goldenAngle = 2.39996;
             float jitter = random(vUv) * 6.28;
-            for (int i = 0; i < 16; i++) {
+            for (int i = 0; i < 64; i++) {
               if (i >= uSamples) break;
               float r = sqrt(float(i) / float(uSamples)) * blurAmount;
               float theta = float(i) * goldenAngle + jitter;
               vec2 offset = vec2(cos(theta), sin(theta)) * r / uResolution;
               if (mod(float(i), 2.0) < 1.0) {
-                float aberration = 1.0 + (uEnergy * 0.05 * (blurAmount / uRadius));
+                float aberration = 1.0 + (uEnergy * 0.05 * (blurAmount / (uRadius + 0.1)));
                 color.r += texture2D(uTexture, vUv + offset * aberration).r;
                 color.g += texture2D(uTexture, vUv + offset).g;
                 color.b += texture2D(uTexture, vUv + offset / aberration).b;
@@ -249,7 +251,7 @@ const SkillsGraph2D = () => {
     // --- 3. Data Preparation ---
     const buildTree = () => {
       const isMobile = window.innerWidth < 768;
-      const root = { name: isMobile ? cvData.personal.name : "Skills", children: [] };
+      const root = { name: isMobile ? "Skills" : cvData.personal.name, children: [] };
       const categories = {};
       const uniqueCats = [...new Set(cvData.skills.map(s => s.category))];
       const mapSkill = (skill, baseHue) => ({ name: skill.name, baseHue, children: skill.children ? skill.children.map(c => mapSkill(c, baseHue)) : [] });
@@ -310,7 +312,7 @@ const SkillsGraph2D = () => {
     window.addEventListener('resize', resize);
     window.addEventListener('scroll', () => updateRepelPoints());
 
-    const springK = 0.08, damping = 0.05, charge = 6000, centerK = 0.02, maxVelocity = 6.0;
+    const springK = 0.08, damping = 0.05, charge = 6000, centerK = 0.015, maxVelocity = 6.0;
     const domRepelK = 80, edgeRepelK = 1000, edgeMargin = 50;
     const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
     const viewSpringK = 0.006, viewDamping = 0.90, mousePos = { x: -1000, y: -1000 };
@@ -328,20 +330,36 @@ const SkillsGraph2D = () => {
     };
 
     const getLSDColor = (index, time, velFactor, depth = 1, baseHue = 0) => {
-      if (depth === 0) return velFactor > 0.1 ? lerpColor('#ffffff', '#f0f0f0', velFactor) : '#ffffff';
-      let hue = depth === 1 ? baseHue : (baseHue + Math.sin(time * 0.0005 + index) * 10 + 360) % 360;
-      let s = 0.3, l = 0.7;
-      if (depth === 1) { s = 0.4; l = 0.75; } else if (depth === 2) { s = 0.2; l = 0.65; } else if (depth === 3) { s = 0.1; l = 0.55; }
+      if (depth === 0) return '#ffffff';
+      
+      let hue = depth === 1 ? baseHue : (baseHue + Math.sin(time * 0.0005 + index) * 15 + 360) % 360;
+      let s = 0.4, l = 0.8;
+      
+      if (depth === 1) { s = 0.5; l = 0.85; } 
+      else if (depth === 2) { s = 0.3; l = 0.75; } 
+      else if (depth === 3) { s = 0.2; l = 0.65; }
+      
+      // Velocity increases brightness and saturation slightly, rather than shifting to red
+      s = Math.min(1.0, s + velFactor * 0.2);
+      l = Math.min(1.0, l + velFactor * 0.1);
+
       const h = hue / 360, q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
-      const f = (t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; };
-      const baseColor = `rgb(${Math.round(f(h+1/3)*255)}, ${Math.round(f(h)*255)}, ${Math.round(f(h-1/3)*255)})`;
-      return velFactor > 0.05 ? lerpColor(baseColor, '#ef4444', velFactor) : baseColor;
+      const f = (t) => { 
+        if (t < 0) t += 1; if (t > 1) t -= 1; 
+        if (t < 1/6) return p + (q - p) * 6 * t; 
+        if (t < 1/2) return q; 
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; 
+        return p; 
+      };
+      
+      return `rgb(${Math.round(f(h+1/3)*255)}, ${Math.round(f(h)*255)}, ${Math.round(f(h-1/3)*255)})`;
     };
 
     const onPointerDown = (e) => {
       lastInteractionTime.current = performance.now();
       if (e.target.closest('a, button, input, textarea')) return;
       const rect = canvas.getBoundingClientRect();
+      screenMouseRef.current = { x: (e.clientX - rect.left) / width, y: (e.clientY - rect.top) / height };
       const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
       for (let i = nodes_sim_ref.current.length - 1; i >= 0; i--) {
         const n = nodes_sim_ref.current[i];
@@ -351,6 +369,7 @@ const SkillsGraph2D = () => {
     const onPointerMove = (e) => {
       lastInteractionTime.current = performance.now();
       const rect = canvas.getBoundingClientRect();
+      screenMouseRef.current = { x: (e.clientX - rect.left) / width, y: (e.clientY - rect.top) / height };
       const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
       mousePos.x = p.x; mousePos.y = p.y;
       if (dragging) { dragging.fx = p.x; dragging.fy = p.y; if (e.cancelable) e.preventDefault(); }
@@ -372,15 +391,20 @@ const SkillsGraph2D = () => {
         perfState.current.fps = (perfState.current.frameCount * 1000) / (now - perfState.current.lastTime);
         perfState.current.frameCount = 0; perfState.current.lastTime = now;
         if (now - perfState.current.lastAdjustment > 2000) {
-          if (perfState.current.fps < 45 && glState.current.samples > 4) glState.current.samples -= 2;
-          else if (perfState.current.fps > 58 && glState.current.samples < 16) glState.current.samples += 2;
+          if (perfState.current.fps < 45 && glState.current.samples > 8) glState.current.samples -= 4;
+          else if (perfState.current.fps > 58 && glState.current.samples < 64) glState.current.samples += 4;
           perfState.current.lastAdjustment = now;
         }
       }
 
       updateRepelPoints();
       const nodes = nodes_sim_ref.current;
-      nodes.forEach(n => { n.ax = 0; n.ay = 0; n.hoverInfluence = 1.0 + Math.exp(-(Math.hypot(n.x-mousePos.x, n.y-mousePos.y)**2) / (2 * 200 * 200)); });
+      nodes.forEach(n => { 
+        n.ax = 0; n.ay = 0; 
+        const dist = Math.hypot(n.x-mousePos.x, n.y-mousePos.y);
+        // More subtle expansion: max 20% instead of 100%
+        n.hoverInfluence = 1.0 + 0.2 * Math.exp(-(dist**2) / (2 * 150 * 150)); 
+      });
 
       links_sim.forEach(l => {
         const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, dist = Math.hypot(dx, dy) || 1, force = springK * (dist - l.rest);
@@ -395,7 +419,11 @@ const SkillsGraph2D = () => {
           const dx = b.x - a.x, dy = b.y - a.y, dist2 = Math.max(36, dx*dx + dy*dy), dist = Math.sqrt(dist2);
           let currCharge = charge * a.hoverInfluence * b.hoverInfluence;
           if (a.depth === 0 || b.depth === 0) currCharge *= 30;
-          else if (a.depth === 1 && b.depth === 1) currCharge *= 12;
+          else if (a.depth === 1 && b.depth === 1) currCharge *= 25; // Even more space between categories
+          else if (a.parent !== b.parent) {
+            // Strong repulsion between nodes from different branches to keep clusters distinct
+            currCharge *= 15;
+          }
           else if (a.depth >= 2 && b.depth >= 2 && a.parent === b.parent) {
             const force = 0.1 * (dist - (a.depth === 2 ? 100 : 60));
             a.ax += force * (dx/dist); a.ay += force * (dy/dist); b.ax -= force * (dx/dist); b.ay -= force * (dy/dist); continue;
@@ -442,19 +470,43 @@ const SkillsGraph2D = () => {
         const setAlpha = (c, a) => c.startsWith('rgba') ? c.replace(/,[\s\d.]+\)$/, `, ${a})`) : c.replace('rgb', 'rgba').replace(')', `, ${a})`);
         const midX = (l.source.x + l.target.x)/2, midY = (l.source.y + l.target.y)/2, cpX = midX + (cx - midX) * 0.15, cpY = midY + (cy - midY) * 0.15, w = (l.source.depth === 0 ? 3 : (l.source.depth === 1 ? 1.5 : 0.8))/view.scale;
         ctx2d.lineCap = 'round'; ctx2d.lineJoin = 'round'; ctx2d.beginPath(); ctx2d.moveTo(l.source.x, l.source.y); ctx2d.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
-        ctx2d.strokeStyle = setAlpha(color, 0.08); ctx2d.lineWidth = w * 4; ctx2d.stroke();
-        ctx2d.strokeStyle = setAlpha(color, 0.3); ctx2d.lineWidth = w; ctx2d.stroke();
+        ctx2d.strokeStyle = setAlpha(color, 0.04); ctx2d.lineWidth = w * 4; ctx2d.stroke(); // Subtle glow
+        ctx2d.strokeStyle = setAlpha(color, 0.15); ctx2d.lineWidth = w; ctx2d.stroke(); // Core line
       });
       nodes.forEach((n, idx) => {
         const color = getLSDColor(idx, now, Math.min(1, Math.hypot(n.vx, n.vy)/(maxVelocity*0.4)), n.depth, n.baseHue);
-        if (n.depth !== 0) { ctx2d.fillStyle = color; ctx2d.beginPath(); ctx2d.arc(n.x, n.y, (1.5 * n.hoverInfluence)/view.scale, 0, Math.PI*2); ctx2d.fill(); }
-        ctx2d.strokeStyle = '#ff0000'; ctx2d.lineJoin = 'round';
+        
+        if (n.depth !== 0) { 
+          ctx2d.fillStyle = color; 
+          ctx2d.beginPath(); 
+          ctx2d.arc(n.x, n.y, (1.8 * n.hoverInfluence)/view.scale, 0, Math.PI*2); 
+          ctx2d.fill(); 
+        }
+
+        // Use a dark, semi-transparent outline for readability against background elements
+        ctx2d.strokeStyle = 'rgba(5, 5, 5, 0.9)'; 
+        ctx2d.lineJoin = 'round';
+        
         if (n.depth === 0) {
-          ctx2d.font = `bold ${(window.innerWidth < 768 ? 60 : 120) * n.hoverInfluence}px "Inter"`; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle'; ctx2d.letterSpacing = '-4px';
-          ctx2d.lineWidth = 4 * n.hoverInfluence; ctx2d.strokeText(n.name.toUpperCase(), n.x, n.y); ctx2d.fillText(n.name.toUpperCase(), n.x, n.y); ctx2d.letterSpacing = '0px';
+          const fontSize = (window.innerWidth < 768 ? 50 : 100) * n.hoverInfluence;
+          ctx2d.font = `900 ${fontSize}px "Inter", sans-serif`; 
+          ctx2d.textAlign = 'center'; 
+          ctx2d.textBaseline = 'middle'; 
+          ctx2d.letterSpacing = '-2px';
+          ctx2d.lineWidth = 6 * n.hoverInfluence; 
+          ctx2d.strokeText(n.name.toUpperCase(), n.x, n.y); 
+          ctx2d.fillStyle = '#ffffff';
+          ctx2d.fillText(n.name.toUpperCase(), n.x, n.y); 
+          ctx2d.letterSpacing = '0px';
         } else {
-          ctx2d.font = `bold ${(window.innerWidth < 768 ? 16 : 12) * n.hoverInfluence}px "Inter"`; ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'bottom';
-          ctx2d.lineWidth = 2 * n.hoverInfluence; ctx2d.strokeText(n.name, n.x, n.y - 10/view.scale); ctx2d.fillText(n.name, n.x, n.y - 10/view.scale);
+          const fontSize = (window.innerWidth < 768 ? 14 : 11) * n.hoverInfluence;
+          ctx2d.font = `600 ${fontSize}px "Inter", sans-serif`; 
+          ctx2d.textAlign = 'center'; 
+          ctx2d.textBaseline = 'bottom';
+          ctx2d.lineWidth = 3 * n.hoverInfluence; 
+          ctx2d.strokeText(n.name, n.x, n.y - 12/view.scale); 
+          ctx2d.fillStyle = color;
+          ctx2d.fillText(n.name, n.x, n.y - 12/view.scale);
         }
       });
       ctx2d.restore();
@@ -468,6 +520,7 @@ const SkillsGraph2D = () => {
         gl.uniform1f(gl.getUniformLocation(program, 'uEnergy'), energy);
         gl.uniform1f(gl.getUniformLocation(program, 'uTime'), performance.now()/1000);
         gl.uniform1i(gl.getUniformLocation(program, 'uSamples'), glState.current.samples);
+        gl.uniform2f(gl.getUniformLocation(program, 'uMouse'), screenMouseRef.current.x, screenMouseRef.current.y);
         const posLoc = gl.getAttribLocation(program, 'position'); gl.enableVertexAttribArray(posLoc);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
         gl.drawArrays(gl.TRIANGLES, 0, 6);

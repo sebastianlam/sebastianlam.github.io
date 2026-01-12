@@ -56,7 +56,7 @@ function App() {
               transition={{ duration: 0.5, ease: "easeInOut" }}
               className="md:sticky md:top-0 md:h-screen z-50"
             >
-              <div className="w-80 h-full overflow-hidden">
+              <div className="w-80 h-full relative">
                 <Sidebar />
               </div>
             </motion.div>
@@ -68,8 +68,48 @@ function App() {
           transition={{ duration: 0.5, ease: "easeInOut" }}
           className={`flex-1 px-6 md:px-12 py-12 space-y-32`}
         >
-          <Section title="Skills" id="skills" hideTitle>
-            <div className="h-[400px]" /> {/* Spacer where the graph used to be */}
+          <Section 
+            title="Skills" 
+            id="skills" 
+            hideTitle 
+            className="h-screen -mt-12 !py-0" 
+            innerClassName="h-full"
+          >
+            <div className="absolute inset-0" /> {/* Clickable area spacer */}
+            <motion.div 
+              animate={{ 
+                y: [0, 15, 0],
+                opacity: [0.4, 0.8, 0.4]
+              }}
+              transition={{ 
+                duration: 2, 
+                repeat: Infinity, 
+                ease: "easeInOut" 
+              }}
+              className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer z-20 p-4"
+              onClick={() => {
+                const expSection = document.getElementById('experience');
+                if (expSection) {
+                  const top = expSection.getBoundingClientRect().top + window.scrollY - 48; // Adjust for main padding
+                  window.scrollTo({ top, behavior: 'smooth' });
+                }
+              }}
+            >
+              <svg 
+                width="48" 
+                height="48" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="1.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className="text-white drop-shadow-lg"
+              >
+                <path d="M7 13l5 5 5-5" />
+                <path d="M7 6l5 5 5-5" />
+              </svg>
+            </motion.div>
           </Section>
 
           <Section title="Experience" id="experience">

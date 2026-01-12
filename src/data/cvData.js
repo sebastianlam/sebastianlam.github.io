@@ -11,45 +11,64 @@ export const cvData = {
     location: "Guildford / Hong Kong",
   },
   skills: [
-    { name: "C++", category: "Programming Languages", level: 80 },
-    { name: "Python", category: "Programming Languages", level: 90 },
-    { name: "Node.js", category: "Programming Languages", level: 85 },
-    { name: "Java", category: "Programming Languages", level: 80 },
-    { name: "LaTeX", category: "Programming Languages", level: 75 },
-    { name: "Clojure", category: "Programming Languages", level: 80 },
-    { name: "ClojureScript", category: "Programming Languages", level: 80 },
-    { name: "SQL", category: "Programming Languages", level: 80 },
-    { name: "HTML", category: "Programming Languages", level: 90 },
-    { name: "CSS", category: "Programming Languages", level: 85 },
-    { name: "PHP", category: "Programming Languages", level: 80 },
-    { name: "Shell Scripting", category: "Programming Languages", level: 85 },
-    { name: "Swift", category: "Programming Languages", level: 70 },
-    { name: "Haskell", category: "Programming Languages", level: 60 },
-    { name: "Prolog", category: "Programming Languages", level: 60 },
-    { name: "Next.js", category: "Frameworks & Libraries", level: 75 },
-    { name: "Vue.js", category: "Frameworks & Libraries", level: 85 },
-    { name: "Flutter", category: "Frameworks & Libraries", level: 80 },
-    { name: "Three.js", category: "Frameworks & Libraries", level: 70 },
-    { name: "SwiftUI", category: "Frameworks & Libraries", level: 75 },
-    { name: "Express.js", category: "Frameworks & Libraries", level: 80 },
-    { name: "AWS", category: "Cloud Platforms", level: 75 },
-    { name: "OCI", category: "Cloud Platforms", level: 65 },
-    { name: "Heroku", category: "Cloud Platforms", level: 70 },
-    { name: "Git", category: "Version Control", level: 90 },
-    { name: "3D Modelling", category: "Design Tools", level: 85, children: [
+    // Languages
+    { name: "C++", category: "Languages", level: 90 },
+    { name: "Python", category: "Languages", level: 90 },
+    { name: "Clojure / CLJS", category: "Languages", level: 85 },
+    { name: "Swift", category: "Languages", level: 80 },
+    { name: "Node.js", category: "Languages", level: 85 },
+    { name: "PHP", category: "Languages", level: 80 },
+    { name: "SQL", category: "Languages", level: 85 },
+    { name: "Shell Scripting", category: "Languages", level: 85 },
+
+    // AI & Computer Vision
+    { name: "Computer Vision", category: "AI & Computer Vision", level: 85, children: [
+      { name: "YOLO", level: 90 },
+      { name: "Synthetic Data (Blender API)", level: 85 },
+      { name: "PySide6", level: 80 }
+    ]},
+    { name: "LLM Orchestration", category: "AI & Computer Vision", level: 80, children: [
+      { name: "TTS / STT", level: 85 },
+      { name: "Voice Interfaces", level: 80 }
+    ]},
+    { name: "Data Analytics", category: "AI & Computer Vision", level: 80, children: [
+      { name: "Data Visualisation", level: 85 },
+      { name: "Forecasting", level: 80 },
+      { name: "Anomaly Detection", level: 75 }
+    ]},
+
+    // Specialised Engineering
+    { name: "Space Systems", category: "Specialised Engineering", level: 85, children: [
+      { name: "Telemetry & Tracking (TT&C)", level: 90 },
+      { name: "Link Resilience", level: 85 },
+      { name: "Satellite Design", level: 80 }
+    ]},
+    { name: "Payment Systems", category: "Specialised Engineering", level: 80, children: [
+      { name: "EMVco / VISA L2 Testing", level: 85 },
+      { name: "Contactless Schemes", level: 80 }
+    ]},
+    { name: "Fintech", category: "Specialised Engineering", level: 85 },
+
+    // Web & Mobile
+    { name: "Next.js", category: "Web & Mobile", level: 85 },
+    { name: "Vue.js", category: "Web & Mobile", level: 85 },
+    { name: "Flutter", category: "Web & Mobile", level: 80 },
+    { name: "Three.js", category: "Web & Mobile", level: 75 },
+    { name: "Tailwind CSS", category: "Web & Mobile", level: 90 },
+
+    // Infrastructure
+    { name: "AWS", category: "Infrastructure", level: 80, children: [
+      { name: "EC2", level: 85 },
+      { name: "S3", level: 90 }
+    ]},
+    { name: "Backend Architecture", category: "Infrastructure", level: 85 },
+
+    // Design & 3D
+    { name: "3D Modelling", category: "Design & 3D", level: 85, children: [
       { name: "Blender", level: 90 },
-      { name: "Rhino", level: 85 },
-      { name: "Grasshopper", level: 80 }
+      { name: "Rhino / Grasshopper", level: 85 }
     ]},
-    { name: "2D Design", category: "Design Tools", level: 80, children: [
-      { name: "Photoshop", level: 85 },
-      { name: "Illustrator", level: 80 },
-      { name: "InDesign", level: 75 },
-      { name: "Figma", level: 85 }
-    ]},
-    { name: "Project Coordination", category: "Software Development", level: 85 },
-    { name: "Documentation", category: "Software Development", level: 85 },
-    { name: "Test-Driven Development (TDD)", category: "Software Development", level: 80 },
+    { name: "Figma", category: "Design & 3D", level: 85 },
   ],
   languages: [
     { name: "English", level: "IELTS 8.5" },

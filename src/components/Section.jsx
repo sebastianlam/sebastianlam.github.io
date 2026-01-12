@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const Section = ({ title, children, id, className = "", hideTitle = false }) => {
+const Section = ({ title, children, id, className = "", innerClassName = "", hideTitle = false }) => {
   return (
     <motion.section 
       layout
@@ -20,7 +20,7 @@ const Section = ({ title, children, id, className = "", hideTitle = false }) => 
           <div className="h-[2px] flex-1 bg-white" />
         </div>
       )}
-      <div className="relative z-10">
+      <div className={`relative z-10 ${innerClassName}`}>
         {children}
       </div>
     </motion.section>
