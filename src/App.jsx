@@ -47,8 +47,15 @@ function App() {
   return (
     <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
       <SkillsGraph />
+      <img src="/root-node.png" alt="Technical Skills Visualization showing Jim Lam's expertise in Space Systems, Computer Vision, and Fintech" className="sr-only" aria-hidden="true" />
       
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
+        {isMobile && !focusMode && (
+          <header className="px-6 py-8 border-b border-white/10 md:hidden">
+            <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
+            <p className="text-xs font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
+          </header>
+        )}
         <AnimatePresence>
           {!focusMode && !isMobile && (
             <motion.div
@@ -89,6 +96,8 @@ function App() {
                 ease: "easeInOut" 
               }}
               className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer z-20 p-4"
+              aria-label="Scroll to background"
+              role="button"
               onClick={() => {
                 const bioSection = document.getElementById('bio');
                 if (bioSection) {
@@ -127,7 +136,7 @@ function App() {
           <Section title="Experience" id="experience">
             <div className="space-y-12">
               {cvData.experience.map((exp, i) => (
-                <div key={i} className="group relative repel-target">
+                <article key={i} className="group relative repel-target">
                   <div className="flex justify-between items-baseline mb-2">
                     <h3 className="text-3xl font-serif text-white">{exp.role}</h3>
                     <span className="text-sm font-mono text-white">{exp.period}</span>
@@ -147,7 +156,7 @@ function App() {
                       </span>
                     ))}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </Section>
@@ -155,7 +164,7 @@ function App() {
           <Section title="Projects" id="projects">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {cvData.projects.map((proj, i) => (
-                <motion.div 
+                <motion.article 
                   whileHover={{ y: -5 }}
                   key={i} 
                   className="p-8 border-2 border-white/5 group transition-colors hover:bg-white/5 repel-target"
@@ -169,14 +178,14 @@ function App() {
                          href={proj.isBroken ? "#" : proj.link} 
                          onClick={proj.isBroken ? (e) => e.preventDefault() : undefined}
                          target={proj.isBroken ? undefined : "_blank"} 
-                         rel="noopener" 
+                         rel={proj.isBroken ? "nofollow" : "noopener noreferrer"} 
                          className={`underline text-sm font-bold transition-colors ${proj.isBroken ? 'cursor-not-allowed text-white' : 'text-white hover:text-white'}`}
                        >
                          {proj.isBroken ? "Apologies, this link is currently broken" : "View Project"}
                        </a>
                      )}
                   </div>
-                </motion.div>
+                </motion.article>
               ))}
             </div>
           </Section>
@@ -184,7 +193,7 @@ function App() {
           <Section title="Education" id="education">
             <div className="space-y-12">
               {cvData.education.map((edu, i) => (
-                <div key={i} className="group relative repel-target">
+                <article key={i} className="group relative repel-target">
                   <div className="flex justify-between items-baseline mb-2">
                     <h3 className="text-3xl font-serif text-white">{edu.degree}</h3>
                     <span className="text-sm font-mono text-white">{edu.period}</span>
@@ -198,7 +207,7 @@ function App() {
                       </span>
                     ))}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </Section>

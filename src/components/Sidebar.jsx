@@ -61,8 +61,8 @@ const Sidebar = () => {
 
       <footer className="pt-8">
         <div className="flex gap-4 mb-4">
-          <a href={cvData.personal.github} target="_blank" rel="noopener" aria-label="GitHub Profile"><Github size={18} className="text-white hover:text-white transition-colors" /></a>
-          <a href={cvData.personal.linkedin} target="_blank" rel="noopener" aria-label="LinkedIn Profile"><Linkedin size={18} className="text-white hover:text-white transition-colors" /></a>
+          <a href={cvData.personal.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub Profile"><Github size={18} className="text-white hover:text-white transition-colors" /></a>
+          <a href={cvData.personal.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn Profile"><Linkedin size={18} className="text-white hover:text-white transition-colors" /></a>
           <a href={`mailto:${cvData.personal.email}`} aria-label="Send Email"><Mail size={18} className="text-white hover:text-white transition-colors" /></a>
         </div>
         <p className="text-[10px] font-mono text-white">© 2026 {cvData.personal.name}</p>
