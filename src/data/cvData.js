@@ -187,6 +187,11 @@ export const cvData = {
       description: "Developed an accessibility-centric, command-line LLM client featuring a pioneering voice interface."
     }
   ],
+  bio: [
+    "I first met Jim when he was still navigating the precise, rhythmic world of parametric architecture in Sydney. Even then, there was a sense that the structures he was building were eventually going to be digital ones. There is a certain kind of person who isn't satisfied with just knowing how a system works, but needs to know how it breaks, how it recovers, and how it can be pushed to its absolute limit—Jim is that person.",
+    "His transition from the drafting table to the terminal was not just a change in career, but a homecoming to a more fundamental kind of design. Whether he is optimizing the link resilience of a satellite tracking system, architecting computer vision backends with YOLO, or navigating the niche, functional elegance of Clojure, Jim brings a uniquely spatial perspective to everything he touches. He builds software with the structural integrity of a skyscraper and the experimental soul of a late-night piano improvisation.",
+    "Outside the IDE, you’ll likely find him high on a bouldering wall, solving a different kind of logic puzzle with his hands, or deep in a flight simulator, where his obsession with telemetry and systems comes full circle. This portfolio is more than a list of roles; it is a chronicle of a mind that refuse to stay in one lane, moving with equal comfort between the low-level rustling of C++ and the high-level abstractions of fintech and space."
+  ],
   education: [
     {
       school: "University of Surrey",

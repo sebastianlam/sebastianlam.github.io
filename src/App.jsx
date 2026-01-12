@@ -88,9 +88,9 @@ function App() {
               }}
               className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer z-20 p-4"
               onClick={() => {
-                const expSection = document.getElementById('experience');
-                if (expSection) {
-                  const top = expSection.getBoundingClientRect().top + window.scrollY - 48; // Adjust for main padding
+                const bioSection = document.getElementById('bio');
+                if (bioSection) {
+                  const top = bioSection.getBoundingClientRect().top + window.scrollY - 48; // Adjust for main padding
                   window.scrollTo({ top, behavior: 'smooth' });
                 }
               }}
@@ -110,6 +110,19 @@ function App() {
                 <path d="M7 6l5 5 5-5" />
               </svg>
             </motion.div>
+          </Section>
+
+          <Section title="Foreword" id="bio">
+            <div className="max-w-3xl space-y-6">
+              {cvData.bio.map((para, i) => (
+                <p key={i} className="text-xl font-serif text-white/80 leading-relaxed italic repel-target">
+                  {para}
+                </p>
+              ))}
+              <div className="pt-4">
+                <p className="text-sm font-mono text-white/40">— A friend & colleague</p>
+              </div>
+            </div>
           </Section>
 
           <Section title="Experience" id="experience">
