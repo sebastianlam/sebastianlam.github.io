@@ -21,7 +21,7 @@ const Sidebar = () => {
         </header>
 
         <nav className="space-y-4 mb-12">
-          {['Skills', 'Foreword', 'Experience', 'Projects', 'Education', 'Interests'].map(item => (
+          {['Skills', 'Background', 'Experience', 'Projects', 'Education', 'Interests'].map(item => (
             <a 
               key={item} 
               href={`#${item.toLowerCase()}`}

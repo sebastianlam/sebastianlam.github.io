@@ -112,16 +112,13 @@ function App() {
             </motion.div>
           </Section>
 
-          <Section title="Foreword" id="bio">
+          <Section title="Background" id="bio">
             <div className="max-w-3xl space-y-6">
               {cvData.bio.map((para, i) => (
                 <p key={i} className="text-xl font-serif text-white/80 leading-relaxed italic repel-target">
                   {para}
                 </p>
               ))}
-              <div className="pt-4">
-                <p className="text-sm font-mono text-white/40">— A friend & colleague</p>
-              </div>
             </div>
           </Section>
 
