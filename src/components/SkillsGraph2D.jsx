@@ -564,7 +564,7 @@ const SkillsGraph2D = () => {
   }, [theme]);
 
   return (
-    <div ref={containerRef} className="fixed inset-0 w-full h-full z-0 bg-[#050505] overflow-hidden pointer-events-none">
+    <div ref={containerRef} aria-hidden="true" className="fixed inset-0 w-full h-full z-0 bg-[#050505] overflow-hidden pointer-events-none">
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" style={{ touchAction: 'none' }} />
     </div>
   );

@@ -30,15 +30,17 @@ function App() {
       infinite: false,
     });
 
+    let rafId;
     function raf(time) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
 
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     return () => {
       lenis.destroy();
+      if (rafId) cancelAnimationFrame(rafId);
     };
   }, []);
 
