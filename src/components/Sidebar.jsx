@@ -15,9 +15,12 @@ const Sidebar = () => {
       }}
     >
       <div>
-        <header className="mb-12">
-          <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
-          <p className="text-xs font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
+        <header 
+          className="mb-12 cursor-pointer group"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white group-hover:text-white transition-colors leading-tight py-1">{cvData.personal.name}</h1>
+          <p className="text-xs font-mono tracking-widest uppercase text-white/60 group-hover:text-white transition-colors">{cvData.personal.title}</p>
         </header>
 
         <nav className="space-y-4 mb-12">

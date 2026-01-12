@@ -51,9 +51,12 @@ function App() {
       
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
         {isMobile && !focusMode && (
-          <header className="px-6 py-8 border-b border-white/10 md:hidden">
-            <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white">{cvData.personal.name}</h1>
-            <p className="text-xs font-mono tracking-widest uppercase text-white">{cvData.personal.title}</p>
+          <header 
+            className="px-6 py-8 border-b border-white/10 md:hidden cursor-pointer group"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white group-hover:text-white transition-colors leading-tight py-1">{cvData.personal.name}</h1>
+            <p className="text-xs font-mono tracking-widest uppercase text-white/60 group-hover:text-white transition-colors">{cvData.personal.title}</p>
           </header>
         )}
         <AnimatePresence>
