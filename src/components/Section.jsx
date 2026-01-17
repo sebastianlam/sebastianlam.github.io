@@ -13,7 +13,7 @@ const Section = ({ title, children, id, className = "", innerClassName = "", hid
       className={`relative ${className}`}
     >
       {!hideTitle && (
-        <div className="flex items-center gap-4 mb-12 repel-target">
+        <div className="flex items-center gap-4 mb-12">
           <h2 className="text-6xl md:text-8xl font-serif text-white uppercase select-none leading-[1.1] py-2">
             {title}
           </h2>

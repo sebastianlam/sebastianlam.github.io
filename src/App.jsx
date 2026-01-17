@@ -129,7 +129,7 @@ function App() {
           <Section title="Background" id="bio">
             <div className="max-w-3xl space-y-6">
               {cvData.bio.map((para, i) => (
-                <p key={i} className="text-xl font-serif text-white/80 leading-relaxed italic repel-target">
+                <p key={i} className="text-xl font-serif text-white/80 leading-relaxed italic">
                   {para}
                 </p>
               ))}
@@ -139,7 +139,7 @@ function App() {
           <Section title="Experience" id="experience">
             <div className="space-y-12">
               {cvData.experience.map((exp, i) => (
-                <article key={i} className="group relative repel-target">
+                <article key={i} className="group relative">
                   <div className="flex justify-between items-baseline mb-2">
                     <h3 className="text-3xl font-serif text-white">{exp.role}</h3>
                     <span className="text-sm font-mono text-white">{exp.period}</span>
@@ -170,7 +170,7 @@ function App() {
                 <motion.article 
                   whileHover={{ y: -5 }}
                   key={i} 
-                  className="p-8 border-2 border-white/5 group transition-colors hover:bg-white/5 repel-target"
+                  className="p-8 border-2 border-white/5 group transition-colors hover:bg-white/5"
                 >
                   <h3 className="text-2xl mb-4 text-white">{proj.title}</h3>
                   <p className="text-sm text-white mb-6">{proj.description}</p>
@@ -196,7 +196,7 @@ function App() {
           <Section title="Education" id="education">
             <div className="space-y-12">
               {cvData.education.map((edu, i) => (
-                <article key={i} className="group relative repel-target">
+                <article key={i} className="group relative">
                   <div className="flex justify-between items-baseline mb-2">
                     <h3 className="text-3xl font-serif text-white">{edu.degree}</h3>
                     <span className="text-sm font-mono text-white">{edu.period}</span>
@@ -216,7 +216,7 @@ function App() {
           </Section>
 
           <Section title="Interests" id="interests">
-            <p className="text-xl font-serif text-white leading-relaxed repel-target">
+            <p className="text-xl font-serif text-white leading-relaxed">
               {cvData.interests}
             </p>
           </Section>

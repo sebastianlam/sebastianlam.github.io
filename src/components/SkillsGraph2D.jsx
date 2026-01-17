@@ -29,8 +29,6 @@ const SkillsGraph2D = () => {
 
   const lastInteractionTime = useRef(performance.now());
   const screenMouseRef = useRef({ x: 0.5, y: 0.5 });
-  const cachedRepelPoints = useRef([]);
-  const lastScrollY = useRef(0);
   const rootImageRef = useRef(null);
 
   useEffect(() => {
@@ -174,10 +172,6 @@ const SkillsGraph2D = () => {
       glState.current = { ...glState.current, ...webgl };
     }
 
-    const range = document.createRange();
-    const lastRepelCacheUpdate = { current: 0 };
-    const repelPoints = { current: [] };
-
     // --- 2. Utility Functions ---
     const measureLabelWidth = (label, depth = 1) => {
       // Use offscreen context for measuring to avoid locking main canvas to 2D
@@ -188,42 +182,6 @@ const SkillsGraph2D = () => {
       ctx.font = `bold ${fontSize}px "Inter", sans-serif`;
       const w = Math.ceil(ctx.measureText(label).width);
       return w + (depth === 0 ? 40 : 10);
-    };
-
-    const updateRepelPoints = (forceRefreshCache = false) => {
-      const now = performance.now();
-      const currentScrollYPos = window.scrollY;
-      
-      if (forceRefreshCache || now - lastRepelCacheUpdate.current > 2000 || cachedRepelPoints.current.length === 0) {
-        const roots = document.querySelectorAll('.repel-target');
-        const textNodes = [];
-        roots.forEach(root => {
-          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-            acceptNode: (node) => (node.textContent.trim().length > 0 ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP)
-          });
-          let node;
-          while (node = walker.nextNode()) textNodes.push(node);
-        });
-
-        const points = [];
-        const vh = window.innerHeight;
-        for (let i = 0; i < textNodes.length; i++) {
-          const node = textNodes[i];
-          if (!node.isConnected) continue;
-          const parentRect = node.parentElement.getBoundingClientRect();
-          if (parentRect.bottom < -100 || parentRect.top > vh + 100) continue;
-          const text = node.textContent;
-          for (let j = 0; j < text.length; j++) {
-            if (text[j] === ' ' || text[j] === '\n' || text[j] === '\r' || text[j] === '\t') continue;
-            range.setStart(node, j); range.setEnd(node, j + 1);
-            const rect = range.getBoundingClientRect();
-            points.push({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 + currentScrollYPos, w: rect.width, h: rect.height });
-          }
-        }
-        cachedRepelPoints.current = points; lastRepelCacheUpdate.current = now;
-      }
-      repelPoints.current = cachedRepelPoints.current.map(p => ({ ...p, y: p.y - currentScrollYPos }));
-      lastScrollY.current = currentScrollYPos;
     };
 
     const nodes_sim_ref = { current: [] };
@@ -254,7 +212,6 @@ const SkillsGraph2D = () => {
           gl.viewport(0, 0, width * dpr, height * dpr);
         }
       }
-      updateRepelPoints(true);
     };
 
     // --- 3. Data Preparation ---
@@ -324,10 +281,9 @@ const SkillsGraph2D = () => {
     // --- 4. Physics & Animation ---
     resize();
     window.addEventListener('resize', resize);
-    window.addEventListener('scroll', () => updateRepelPoints());
 
     const springK = 0.08, damping = 0.05, charge = 6000, centerK = 0.015, maxVelocity = 6.0;
-    const domRepelK = 80, edgeRepelK = 1000, edgeMargin = 50;
+    const edgeRepelK = 1000, edgeMargin = 50;
     const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
     const viewSpringK = 0.006, viewDamping = 0.90, mousePos = { x: -1000, y: -1000 };
     const STABLE_ENERGY_THRESHOLD = 0.001;
@@ -411,7 +367,6 @@ const SkillsGraph2D = () => {
         }
       }
 
-      updateRepelPoints();
       const nodes = nodes_sim_ref.current;
       nodes.forEach(n => { 
         n.ax = 0; n.ay = 0; 
@@ -445,11 +400,6 @@ const SkillsGraph2D = () => {
           }
           const force = currCharge / dist2; a.ax -= force * (dx/dist); a.ay -= force * (dy/dist); b.ax += force * (dx/dist); b.ay += force * (dy/dist);
         }
-        repelPoints.current.forEach(p => {
-          const dx = a.x - (p.x - view.x)/view.scale, dy = a.y - (p.y - view.y)/view.scale;
-          const d2 = dx*dx + dy*dy, minDist = Math.max(p.w, p.h)/view.scale/2 + 30;
-          if (d2 < minDist*minDist) { const d = Math.sqrt(d2) || 1, force = (domRepelK * (1 - d/minDist))/d; a.ax += dx*force; a.ay += dy*force; }
-        });
         const sx = a.x * view.scale + view.x, sy = a.y * view.scale + view.y;
         if (sx < edgeMargin) a.ax += (edgeRepelK * (1 - sx/edgeMargin))/view.scale; else if (sx > width - edgeMargin) a.ax -= (edgeRepelK * (1 - (width-sx)/edgeMargin))/view.scale;
         if (sy < edgeMargin) a.ay += (edgeRepelK * (1 - sy/edgeMargin))/view.scale; else if (sy > height - edgeMargin) a.ay -= (edgeRepelK * (1 - (height-sy)/edgeMargin))/view.scale;
