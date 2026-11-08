@@ -1,21 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useApp } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Section from './components/Section';
 import { cvData } from './data/cvData';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
-import SkillsGraph from './components/SkillsGraph2D';
 import { FileText, Github, Linkedin, Mail } from 'lucide-react';
+
+const SkillsGraph = lazy(() => import('./components/SkillsGraph2D'));
 
 function App() {
   const { focusMode, setFocusMode } = useApp();
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [graphReady, setGraphReady] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(() => setGraphReady(true), { timeout: 600 });
+      return () => window.cancelIdleCallback(id);
+    } else {
+      const id = setTimeout(() => setGraphReady(true), 120);
+      return () => clearTimeout(id);
+    }
   }, []);
 
   useEffect(() => {
@@ -47,7 +59,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-transparent text-white transition-colors duration-300">
-      <SkillsGraph />
+      {graphReady && (
+        <Suspense fallback={null}>
+          <SkillsGraph />
+        </Suspense>
+      )}
 
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
         {isMobile && (

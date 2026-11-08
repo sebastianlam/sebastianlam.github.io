@@ -476,6 +476,19 @@ const SkillsGraph2D = () => {
       }
     };
 
+    const isSoftwareRenderer = (() => {
+      try {
+        const gl = glState.current.gl;
+        if (!gl) return true;
+        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+        const renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '';
+        return /SwiftShader|llvmpipe|Software/i.test(renderer);
+      } catch {
+        return false;
+      }
+    })();
+    const activeDurationMs = isSoftwareRenderer ? 120 : 3000;
+
     function animate() {
       raf = null;
       if (isPaused) return;
@@ -493,7 +506,7 @@ const SkillsGraph2D = () => {
         }
       }
 
-      const isActivePhysics = (now - lastInteractionTime.current <= 3000) || Boolean(dragging);
+      const isActivePhysics = (now - lastInteractionTime.current <= activeDurationMs) || Boolean(dragging);
       let energy = 0;
 
       if (isActivePhysics) {
@@ -729,7 +742,7 @@ const SkillsGraph2D = () => {
       scrollDirty = false;
 
       // Continue animation loop only if physics is still active or settling; otherwise sleep at 0% CPU/GPU
-      if (isActivePhysics && (energy >= STABLE_ENERGY_THRESHOLD || now - lastInteractionTime.current <= 3000 || dragging)) {
+      if (isActivePhysics && (energy >= STABLE_ENERGY_THRESHOLD || now - lastInteractionTime.current <= activeDurationMs || dragging)) {
         scheduleFrame();
       } else if (scrollDirty) {
         scheduleFrame();
