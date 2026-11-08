@@ -1,7 +1,7 @@
 export const cvData = {
   personal: {
     name: "Jim Lam",
-    title: "Software Engineer",
+    title: "Test Analyst | VP Missions, Peryton Space",
     email: "jim.sebastian.lam@gmail.com",
     uniEmail: "jl03093@surrey.ac.uk",
     linkedin: "https://www.linkedin.com/in/jim-l-3154a0102/",
@@ -25,6 +25,7 @@ export const cvData = {
     {
       name: "Computer Vision", category: "AI & Computer Vision", level: 85, children: [
         { name: "YOLO", level: 90 },
+        { name: "AprilTags", level: 85 },
         { name: "Synthetic Data (Blender API)", level: 85 },
         { name: "PySide6", level: 80 }
       ]
@@ -53,8 +54,8 @@ export const cvData = {
     },
     {
       name: "Payment Systems", category: "Specialised Engineering", level: 80, children: [
-        { name: "EMVco / VISA L2 Testing", level: 85 },
-        { name: "Contactless Schemes", level: 80 }
+        { name: "EMVCo / VISA / AMEX L2", level: 85 },
+        { name: "PURE & CCD Card Testing", level: 80 }
       ]
     },
     { name: "Fintech", category: "Specialised Engineering", level: 85 },
@@ -92,113 +93,110 @@ export const cvData = {
   ],
   experience: [
     {
-      role: "Test Analyst Intern",
+      role: "Test Analyst",
       company: "Fime",
       period: "September 2025 - Present",
-      tags: ["testing", "qa", "L2", "EMVco", "VISA", "contactless", "FIME"],
-      description: "Performing L2 testing for terminals in the EMVco contact and VISA contactless schemes, ensuring compliance and reliability for payment systems during a full-time placement year."
-    },
-    {
-      role: "Team Lead & TT&C Lead",
-      company: "Peryton Space Satellite Design Competition",
-      period: "September 2025 - Present",
-      tags: ["leadership", "space", "satellite", "telemetry", "tracking", "command", "SDC", "C++", "Next.js"],
-      description: "Spearheading the Peryton Space team for the current competition cycle, managing overall technical direction and continuing to lead the Telemetry, Tracking, and Command workstream."
-    },
-    {
-      role: "TT&C Team Lead",
-      company: "Peryton Space Society",
-      period: "September 2024 - July 2025",
-      tags: ["space", "satellite", "telemetry", "tracking", "command", "leadership", "UKSEDS", "award", "innovation"],
+      tags: ["testing", "verification", "EMVCo", "VISA", "AMEX", "PURE", "CCD", "python", "LLM"],
       highlights: [
-        "Led the Telemetry, Tracking, and Command workstream for the UKSEDS satellite design competition entry.",
-        "Optimised communications configuration for link resilience (antenna selection, error correction, compression) and built ground station tooling (telemetry dashboard and command interface).",
-        "Won the Best Innovation Award at the Airbus Defence and Space Stevenage site."
+        "Intern (full-time) Sep 2025 - Sep 2026; Test Analyst (part-time) Sep 2026 - Present. Guildford, on-site.",
+        "Type Approval campaigns for EMVCo Contact Level 2 (EMV L2) and Contactless kernels (VISA/AMEX), plus card testing per PURE and CCD.",
+        "Wrote custom scripts that parse vendor-locked tool logs into required reporting documents.",
+        "Built a local LLM PDF spec parser that uses fewer tokens than pypdf."
+      ]
+    },
+    {
+      role: "VP Missions; Team Lead & TT&C Lead (UKSEDS SDC)",
+      company: "Peryton Space",
+      period: "September 2024 - Present",
+      tags: ["space", "satellite", "TT&C", "computer-vision", "AprilTags", "C++", "Next.js", "Cloudflare", "ECSS"],
+      highlights: [
+        "VP Missions (May 2026 - Present): mentor non-rocketry competition teams (Olympus Rover, Satellite Design, Airbus Space). Migrated the society site from WordPress to Cloudflare.",
+        "Team Lead and TT&C Lead, Satellite Design Competition (Sep 2025 - Jul 2026): 3U CubeSat lunar simulation with stereoscopic computer-vision depth maps. Ran ECSS (European Cooperation for Space Standardization) PDR/CDR. Finished 6th of 20 nationally.",
+        "TT&C (telemetry, tracking and command) and Payload Lead (Sep 2024 - Jul 2025): Best Innovation Award (Airbus Defence and Space, Stevenage). AprilTags CV navigation with attitude/orbit control, link margin under mass/budget, low-latency video, and Next.js + C++ ground station."
       ]
     },
     {
       role: "LAB Pal for COM1026 & Buddy Scheme Mentor",
       company: "University of Surrey",
-      period: "Present",
+      period: "September 2024 - June 2025",
       tags: ["university", "mentoring", "mathematics", "probability", "automata"],
-      description: "Proactively supported and guided students in discrete mathematics, automata theory, and probability. Provided personal academic advice to first-year students, consistently fostering a collaborative and high-achieving learning environment."
+      description: "Supported first-year students in discrete mathematics, automata theory, and probability during COM1026 lab sessions, alongside academic mentoring through the Buddy Scheme."
     },
     {
       role: "Computer Vision Lead",
       company: "Sports Vision",
-      period: "Present",
+      period: "2023 - 2024",
       tags: ["computer-vision", "yolo", "python", "pyside", "blender", "synthetic-data", "backend"],
-      description: "Architected and spearheaded the development of a computer vision backend for a visual snooker scoring system using YOLO. Designed and implemented a custom image annotation tool with PySide6 and currently driving synthetic data generation via the Blender Python API to enhance system accuracy."
+      description: "Built the computer vision backend for a visual snooker scoring system using YOLO. Created a custom image annotation tool in PySide6 and generated synthetic training data via the Blender Python API."
+    },
+    {
+      role: "Software Developer",
+      company: "Next Token Solutions",
+      period: "October 2020 - January 2023",
+      tags: ["fintech", "aws", "php", "clojure", "vue", "mysql", "s3", "apache", "ec2", "flutter", "ios"],
+      highlights: [
+        "Built and maintained web features for Finmonster, an SME loan-matching fintech platform.",
+        "Automated server management tasks on AWS using Shell scripting.",
+        "Executed a full stack migration across PHP, jQuery, Vue.js, Clojure, MySQL, S3, and Apache on EC2.",
+        "Developed mobile applications in Flutter and native iOS (migrating legacy React Native apps), and handled client requirements and proposals."
+      ]
     },
     {
       role: "English Tutor",
       company: "Freelance",
-      period: "Q2 2021 - Present",
+      period: "Q2 2021 - Q1 2023",
       tags: ["teaching", "english", "stem", "tutoring"],
-      description: "Deliver tailored, advanced-level English tutoring with a focus on STEM terminology, significantly improving students' technical vocabulary and domain knowledge."
+      description: "Tutored Years 6-8 students in English with a focus on STEM terminology and technical vocabulary."
     },
     {
-      role: "Software Engineer",
-      company: "Next Token Solutions",
-      period: "October 2020 - December 2022",
-      tags: ["fintech", "aws", "php", "clojure", "vue", "mysql", "s3", "apache", "ec2", "flutter", "ios"],
-      highlights: [
-        "Supported web development for Finmonster, a fintech platform designed for local SME loan matching.",
-        "Automated server management tasks on AWS using Shell scripting to streamline operations.",
-        "Performed platform maintenance and executed a successful stack migration (PHP, jQuery, Vue.js, Clojure, MySQL, S3, Apache on EC2).",
-        "Gathered client requirements and prepared effective proposals in a project coordination role.",
-        "Drove mobile app development with Flutter and native iOS, migrating legacy React Native apps."
-      ]
-    },
-    {
-      role: "Part-Time Developer",
+      role: "Part-Time Web Developer",
       company: "Tommax",
-      period: "June 2020 - October 2020",
+      period: "January 2020 - October 2021",
       tags: ["e-commerce", "php", "client", "translation", "marketing"],
-      description: "Collaborated directly with clients on e-commerce solutions and PHP web development projects. Enhanced company communications by providing strategic translation services and producing region-specific subtitling for marketing campaigns."
+      description: "Worked with clients on e-commerce solutions and PHP web development projects, alongside translation and region-specific subtitling for marketing campaigns."
     },
     {
       role: "Team Member",
       company: "Barangaroo Promenade Pavilion Design Competition",
       period: "Summer 2020",
       tags: ["architecture", "competition", "parametric-design", "pavilion"],
-      description: "Jointly put forward a pavilion design competition entry with a holistic approach to create a functional public shelter, through a supersized parametric take of the Aboriginal coolamon."
+      description: "Co-designed a competition pavilion entry for a public shelter based on a parametric interpretation of the Aboriginal coolamon."
     },
     {
       role: "Audio Assistant",
       company: "“Innonation” Live Music Company",
       period: "December 2018",
       tags: ["audio", "events", "live", "installation"],
-      description: "Managed live audio equipment installations for high-profile events across Hong Kong, ensuring reliable operational performance under demanding time and physical constraints."
+      description: "Installed and operated live audio equipment for concerts, weddings, and corporate events across Hong Kong."
     },
     {
       role: "Finalist",
       company: "HKU Decacorn Entrepreneurial Camp Case Competition",
       period: "June 2018",
       tags: ["entrepreneurship", "competition", "startup", "pitch"],
-      description: "Conceived and pitched a startup proposal for an integrated knowledge and graduate headhunting platform within 24 hours, grounded on strategic insight from HKU industry advisors."
+      description: "Pitched a startup proposal for an integrated knowledge and graduate headhunting platform within 24 hours, advised by HKU mentors."
     }
   ],
   projects: [
     {
-      title: "Lidl Spending Dashboard",
-      status: "Currently Offline",
-      isBroken: true,
-      tags: ["dashboard", "data-visualisation", "python", "forecasting", "anomaly-detection", "treemap"],
-      description: "Interactive personal finance dashboard covering 25 months of supermarket receipts with category treemaps, monthly spend trends, anomaly detection, and short-term forecasts.",
-      link: "http://193.123.178.35/dashboard"
-    },
-    {
-      title: "URL+",
-      status: "Present",
-      tags: ["clojurescript", "plugin", "logseq", "tailwindcss", "rum"],
-      description: "Contributor to the only ClojureScript plugin for Logseq. Developed features to retrieve and organise URL responses and deliver dictionary-style definitions."
+      title: "peryton.space",
+      status: "Live",
+      tags: ["cloudflare", "web", "migration", "space"],
+      description: "Peryton Space society website, rebuilt and migrated from WordPress onto Cloudflare.",
+      link: "https://peryton.space"
     },
     {
       title: "DrunkGPT",
-      status: "Present",
+      status: "Open Source",
       tags: ["cli", "accessibility", "voice", "llm", "tts", "stt"],
-      description: "Developed an accessibility-centric, command-line LLM client featuring a pioneering voice interface."
+      description: "CLI LLM client with a voice interface, built when OpenAI opened the public GPT-3.5 API.",
+      link: "https://github.com/sebastianlam/drunkgpt"
+    },
+    {
+      title: "URL+",
+      status: "Open Source",
+      tags: ["clojurescript", "plugin", "logseq", "tailwindcss", "rum"],
+      description: "Contributor to the ClojureScript Logseq plugin for fetching URLs and displaying dictionary-style definitions."
     }
   ],
   bio: [
@@ -209,15 +207,15 @@ export const cvData = {
   education: [
     {
       school: "University of Surrey",
-      degree: "BSc (Hons.) in Computer Science with PTY",
+      degree: "BSc (Hons) Computer Science with Professional Training Year",
       period: "September 2023 - August 2027",
-      details: "Year-one aggregate: 86.13%. Active member of the Mountaineering Club.",
-      tags: ["university", "satellite", "telemetry", "tracking", "command", "leadership", "space"]
+      details: "Year 1: 86.13% | Year 2: 75.5% | Professional Training Year (PTY).",
+      tags: ["university", "computer-science", "satellite", "TT&C", "leadership", "space"]
     },
     {
       school: "University of Sydney",
-      degree: "Bachelor of Design in Architecture (Hons.)",
-      period: "January 2019 - August 2020",
+      degree: "Bachelor of Design in Architecture (Hons)",
+      period: "January 2019 - June 2020",
       tags: ["architecture", "university", "sydney", "design"]
     },
     {
@@ -228,5 +226,5 @@ export const cvData = {
       tags: ["secondary", "hong-kong", "science", "physics", "chemistry", "biology"]
     }
   ],
-  interests: "Bouldering/Climbing (V7/7A+), Debating, Piano Improv, Flight Simulation (X-Plane 12)"
+  interests: "Bouldering (V7/7A+), Debating, Piano, Flight Simulation (X-Plane 12)"
 };

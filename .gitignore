@@ -35,3 +35,7 @@ build/
 tmp/
 temp/
 .tmp
+
+# Private CV handover
+career-handover/
+career-handover.zip

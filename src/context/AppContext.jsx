@@ -4,7 +4,7 @@ const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [theme, setTheme] = useState('dark');
-  const [focusMode, setFocusMode] = useState(window.innerWidth < 768);
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -29,4 +29,3 @@ export const AppProvider = ({ children }) => {
 };
 
 export const useApp = () => useContext(AppContext);
-

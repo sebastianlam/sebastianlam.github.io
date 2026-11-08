@@ -16,10 +16,14 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm i -g serve @lhci/cli @axe-core/cli html-validate linkinator
-      - run: nohup serve -s dist -l 4173 >/dev/null 2>&1 &
+      - run: |
+          nohup serve -s dist -l 4173 >/dev/null 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4173 >/dev/null && break
+            sleep 0.5
+          done
       - run: lhci collect --url=http://localhost:4173 --numberOfRuns=3 --config=lighthouserc.json
-      - run: lhci assert --config=lighthouserc.json || true
+      - run: lhci assert --config=lighthouserc.json
       - run: axe http://127.0.0.1:4173 --exit --stdout
       - run: html-validate dist/index.html
-      - run: linkinator http://localhost:4173 --recurse --silent
-
+      - run: linkinator http://localhost:4173 --config linkinator.config.json

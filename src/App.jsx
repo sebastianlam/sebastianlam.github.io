@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Section from './components/Section';
@@ -6,10 +6,11 @@ import { cvData } from './data/cvData';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lenis from 'lenis';
 import SkillsGraph from './components/SkillsGraph2D';
+import { FileText, Github, Linkedin, Mail } from 'lucide-react';
 
 function App() {
   const { focusMode, setFocusMode } = useApp();
-  const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -45,20 +46,62 @@ function App() {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-transparent text-white transition-colors duration-300`}>
+    <div className="min-h-screen bg-transparent text-white transition-colors duration-300">
       <SkillsGraph />
-      <img src="/root-node.png" alt="Technical Skills Visualization showing Jim Lam's expertise in Space Systems, Computer Vision, and Fintech" className="sr-only" aria-hidden="true" />
-      
+
       <div className="flex flex-col md:flex-row max-w-[1600px] mx-auto min-h-screen relative z-10">
-        {isMobile && !focusMode && (
-          <header 
-            className="px-6 py-8 border-b border-white/10 md:hidden cursor-pointer group"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <h1 className="text-4xl font-serif mb-2 tracking-tighter uppercase text-white group-hover:text-white transition-colors leading-tight py-1">{cvData.personal.name}</h1>
-            <p className="text-xs font-mono tracking-widest uppercase text-white/60 group-hover:text-white transition-colors">{cvData.personal.title}</p>
+        {isMobile && (
+          <header className="px-6 py-6 border-b border-white/10 md:hidden bg-black/50 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between gap-4">
+            <div
+              className="cursor-pointer"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            >
+              <h1 className="text-2xl font-serif tracking-tighter uppercase text-white leading-tight">
+                {cvData.personal.name}
+              </h1>
+              <p className="text-[10px] font-mono tracking-widest uppercase text-white/70">
+                {cvData.personal.title}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <a
+                href={cvData.personal.cv}
+                download="Jim_Lam_CV.pdf"
+                className="px-3 py-2 border border-white/20 hover:bg-white hover:text-black transition-colors text-white flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
+                aria-label="Download CV PDF"
+              >
+                <FileText size={14} />
+                <span>CV</span>
+              </a>
+              <a
+                href={cvData.personal.github}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub Profile"
+                className="p-2 text-white/80 hover:text-white"
+              >
+                <Github size={16} />
+              </a>
+              <a
+                href={cvData.personal.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn Profile"
+                className="p-2 text-white/80 hover:text-white"
+              >
+                <Linkedin size={16} />
+              </a>
+              <a
+                href={`mailto:${cvData.personal.email}`}
+                aria-label="Send Email"
+                className="p-2 text-white/80 hover:text-white"
+              >
+                <Mail size={16} />
+              </a>
+            </div>
           </header>
         )}
+
         <AnimatePresence>
           {!focusMode && !isMobile && (
             <motion.div
@@ -74,56 +117,56 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
-        
-        <motion.main 
+
+        <motion.main
           layout
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className={`flex-1 px-6 md:px-12 py-12 space-y-32`}
+          className="flex-1 px-6 md:px-12 py-12 space-y-32"
         >
-          <Section 
-            title="Skills" 
-            id="skills" 
-            hideTitle 
-            className="h-screen -mt-12 !py-0" 
+          <Section
+            title="Skills"
+            id="skills"
+            hideTitle
+            className="h-screen -mt-12 !py-0"
             innerClassName="h-full"
           >
-            <div className="absolute inset-0" /> {/* Clickable area spacer */}
-            <motion.div 
-              animate={{ 
+            <div className="absolute inset-0" />
+            <motion.button
+              type="button"
+              animate={{
                 y: [0, 15, 0],
                 opacity: [0.4, 0.8, 0.4]
               }}
-              transition={{ 
-                duration: 2, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
               }}
-              className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer z-20 p-4"
+              className="absolute bottom-12 left-1/2 -translate-x-1/2 cursor-pointer z-20 p-4 bg-transparent border-0"
               aria-label="Scroll to background"
-              role="button"
               onClick={() => {
                 const bioSection = document.getElementById('bio');
                 if (bioSection) {
-                  const top = bioSection.getBoundingClientRect().top + window.scrollY - 48; // Adjust for main padding
+                  const top = bioSection.getBoundingClientRect().top + window.scrollY - 48;
                   window.scrollTo({ top, behavior: 'smooth' });
                 }
               }}
             >
-              <svg 
-                width="48" 
-                height="48" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="1.5" 
-                strokeLinecap="round" 
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
                 strokeLinejoin="round"
                 className="text-white drop-shadow-lg"
               >
                 <path d="M7 13l5 5 5-5" />
                 <path d="M7 6l5 5 5-5" />
               </svg>
-            </motion.div>
+            </motion.button>
           </Section>
 
           <Section title="Background" id="bio">
@@ -140,9 +183,9 @@ function App() {
             <div className="space-y-12">
               {cvData.experience.map((exp, i) => (
                 <article key={i} className="group relative">
-                  <div className="flex justify-between items-baseline mb-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2 gap-1">
                     <h3 className="text-3xl font-serif text-white">{exp.role}</h3>
-                    <span className="text-sm font-mono text-white">{exp.period}</span>
+                    <span className="text-sm font-mono text-white/80 shrink-0">{exp.period}</span>
                   </div>
                   <p className="text-lg font-bold mb-4 text-white">{exp.company}</p>
                   {exp.highlights ? (
@@ -167,26 +210,28 @@ function App() {
           <Section title="Projects" id="projects">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {cvData.projects.map((proj, i) => (
-                <motion.article 
+                <motion.article
                   whileHover={{ y: -5 }}
-                  key={i} 
-                  className="p-8 border-2 border-white/5 group transition-colors hover:bg-white/5"
+                  key={i}
+                  className="p-8 border-2 border-white/10 group transition-colors hover:bg-white/5 flex flex-col justify-between"
                 >
-                  <h3 className="text-2xl mb-4 text-white">{proj.title}</h3>
-                  <p className="text-sm text-white mb-6">{proj.description}</p>
+                  <div>
+                    <h3 className="text-2xl mb-4 text-white">{proj.title}</h3>
+                    <p className="text-sm text-white mb-6">{proj.description}</p>
+                  </div>
                   <div className="flex justify-between items-end">
-                     <span className="text-[10px] uppercase tracking-tighter text-white">{proj.status}</span>
-                     {proj.link && (
-                       <a 
-                         href={proj.isBroken ? "#" : proj.link} 
-                         onClick={proj.isBroken ? (e) => e.preventDefault() : undefined}
-                         target={proj.isBroken ? undefined : "_blank"} 
-                         rel={proj.isBroken ? "nofollow" : "noopener noreferrer"} 
-                         className={`underline text-sm font-bold transition-colors ${proj.isBroken ? 'cursor-not-allowed text-white' : 'text-white hover:text-white'}`}
-                       >
-                         {proj.isBroken ? "Apologies, this link is currently broken" : "View Project"}
-                       </a>
-                     )}
+                    <span className="text-[10px] uppercase tracking-widest text-white/70">{proj.status}</span>
+                    {proj.link && (
+                      <a
+                        href={proj.isBroken ? "#" : proj.link}
+                        onClick={proj.isBroken ? (e) => e.preventDefault() : undefined}
+                        target={proj.isBroken ? undefined : "_blank"}
+                        rel={proj.isBroken ? "nofollow" : "noopener noreferrer"}
+                        className={`underline text-sm font-bold transition-colors ${proj.isBroken ? 'cursor-not-allowed text-white/50' : 'text-white hover:text-white'}`}
+                      >
+                        {proj.isBroken ? "Currently Offline" : "View Project"}
+                      </a>
+                    )}
                   </div>
                 </motion.article>
               ))}
@@ -197,9 +242,9 @@ function App() {
             <div className="space-y-12">
               {cvData.education.map((edu, i) => (
                 <article key={i} className="group relative">
-                  <div className="flex justify-between items-baseline mb-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2 gap-1">
                     <h3 className="text-3xl font-serif text-white">{edu.degree}</h3>
-                    <span className="text-sm font-mono text-white">{edu.period}</span>
+                    <span className="text-sm font-mono text-white/80 shrink-0">{edu.period}</span>
                   </div>
                   <p className="text-lg font-bold mb-4 text-white">{edu.school}</p>
                   {edu.details && <p className="text-white mb-4">{edu.details}</p>}
@@ -225,7 +270,7 @@ function App() {
 
       <AnimatePresence>
         {focusMode && !isMobile && (
-          <motion.button 
+          <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
@@ -242,4 +287,3 @@ function App() {
 }
 
 export default App;
-

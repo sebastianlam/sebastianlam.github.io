@@ -1,7 +1,8 @@
 {
-	"recurse": true,
-	"silent": true,
-	"skip": [
-		"https?://(www\\.)?linkedin\\.com/.*"
-	]
+  "recurse": true,
+  "silent": true,
+  "skip": [
+    "https?://(www\\.)?linkedin\\.com/.*",
+    "https?://peryton\\.space.*"
+  ]
 }
