@@ -13,6 +13,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - uses: browser-actions/setup-chrome@v1
+        id: setup-chrome
+        with:
+          install-chromedriver: true
       - run: npm ci
       - run: npm run build
       - run: npm i -g serve @lhci/cli @axe-core/cli html-validate linkinator
@@ -23,7 +27,9 @@ jobs:
             sleep 0.5
           done
       - run: lhci collect --url=http://localhost:4173 --numberOfRuns=3 --config=lighthouserc.json
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
       - run: lhci assert --config=lighthouserc.json
-      - run: axe http://127.0.0.1:4173 --exit --stdout
+      - run: axe http://127.0.0.1:4173 --chrome-path "${{ steps.setup-chrome.outputs.chrome-path }}" --chromedriver-path "${{ steps.setup-chrome.outputs.chromedriver-path }}" --exit --stdout
       - run: html-validate dist/index.html
       - run: linkinator http://localhost:4173 --config linkinator.config.json
