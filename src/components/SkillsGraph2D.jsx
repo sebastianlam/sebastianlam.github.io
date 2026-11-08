@@ -202,9 +202,15 @@ const SkillsGraph2D = () => {
     let lastScrollY = window.scrollY;
     let scrollDirty = true;
 
-    const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
+    const resize = (force = false) => {
+      const newW = window.innerWidth;
+      const newH = window.innerHeight;
+      // Ignore small vertical height changes on mobile caused by address bar retracting/expanding
+      if (!force && newW === width && Math.abs(newH - height) < 120 && newW < 768) {
+        return;
+      }
+      width = newW;
+      height = newH;
       texW = Math.max(1, Math.round(width * texScale));
       texH = Math.max(1, Math.round(height * texScale));
 
@@ -306,17 +312,18 @@ const SkillsGraph2D = () => {
 
     nodes_sim_ref.current = layout.nodes.map(n => {
       const label = n.node.name;
-      const w = n.depth === 0 ? 200 : measureLabelWidth(label, n.depth);
+      const isMobile = window.innerWidth < 768;
+      const w = n.depth === 0 ? (isMobile ? 120 : 200) : measureLabelWidth(label, n.depth);
       let initX;
       let initY;
       if (n.depth === 0) {
         initX = rootFixed.x;
         initY = rootFixed.y;
       } else {
-        const angle = (n.baseHue / 360) * (Math.PI / 2);
-        const distance = n.depth === 1 ? 300 : n.depth * 180;
+        const angle = (n.baseHue / 360) * (Math.PI * 2);
+        const distance = n.depth === 1 ? 240 : n.depth * 150;
         initX = rootFixed.x + Math.cos(angle) * distance + (Math.random() - 0.5) * 10;
-        initY = rootFixed.y + Math.sin(angle) * distance * 0.6 + (Math.random() - 0.5) * 10;
+        initY = rootFixed.y + Math.sin(angle) * distance * 0.7 + (Math.random() - 0.5) * 10;
       }
       return {
         name: label,
@@ -331,7 +338,7 @@ const SkillsGraph2D = () => {
         ax: 0,
         ay: 0,
         width: w,
-        height: n.depth === 0 ? 200 : 16,
+        height: n.depth === 0 ? (isMobile ? 120 : 200) : 28,
         fx: null,
         fy: null,
         hoverInfluence: 1.0,
@@ -341,7 +348,7 @@ const SkillsGraph2D = () => {
     const links_sim = layout.links.map(l => ({
       source: nodes_sim_ref.current[layout.nodes.indexOf(l.source)],
       target: nodes_sim_ref.current[layout.nodes.indexOf(l.target)],
-      rest: (l.source.depth === 0 ? 300 : 120) + l.source.depth * 40,
+      rest: (l.source.depth === 0 ? 260 : 110) + l.source.depth * 35,
     }));
 
     // --- 4. Physics & Animation ---
@@ -351,10 +358,9 @@ const SkillsGraph2D = () => {
     const centerK = 0.015;
     const maxVelocity = 6.0;
     const edgeRepelK = 1000;
-    const edgeMargin = 50;
     const view = { x: 0, y: 0, scale: 1, vx: 0, vy: 0, vs: 0 };
-    const viewSpringK = 0.006;
-    const viewDamping = 0.9;
+    const viewSpringK = 0.008;
+    const viewDamping = 0.88;
     const mousePos = { x: -1000, y: -1000 };
     const STABLE_ENERGY_THRESHOLD = 0.001;
     let dragging = null;
@@ -409,34 +415,64 @@ const SkillsGraph2D = () => {
       scheduleFrame();
     };
 
-    const onPointerDown = e => {
-      lastInteractionTime.current = performance.now();
-      if (e.target.closest('a, button, input, textarea')) return;
+    // Hit-test helper in screen pixels so mobile touch targets are always finger-friendly (~44px min)
+    const findNodeAtClientPoint = (clientX, clientY, isTouch = false) => {
       const rect = canvas.getBoundingClientRect();
-      screenMouseRef.current = { x: (e.clientX - rect.left) / width, y: (e.clientY - rect.top) / height };
-      const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
+      const sx = clientX - rect.left;
+      const sy = clientY - rect.top;
+      screenMouseRef.current = { x: sx / width, y: sy / height };
+      const p = { x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale };
+      mousePos.x = p.x;
+      mousePos.y = p.y;
+
+      const touchPad = isTouch ? 22 : 8;
+      let bestNode = null;
+      let bestDist = Infinity;
+
       for (let i = nodes_sim_ref.current.length - 1; i >= 0; i--) {
         const n = nodes_sim_ref.current[i];
-        if (
-          Math.abs(p.x - n.x) < (n.width * (n.hoverInfluence || 1)) / 2 &&
-          Math.abs(p.y - n.y) < (n.height * (n.hoverInfluence || 1)) / 2
-        ) {
-          dragging = n;
-          n.fx = p.x;
-          n.fy = p.y;
-          break;
+        const inf = n.hoverInfluence || 1;
+        const nodeScreenX = n.x * view.scale + view.x;
+        // Node labels sit slightly above n.y, so shift hitbox center up slightly for non-root nodes
+        const nodeScreenY = (n.y - (n.depth === 0 ? 0 : 8 / view.scale)) * view.scale + view.y;
+        const halfW = Math.max(22, (n.width * inf * view.scale) / 2) + touchPad;
+        const halfH = Math.max(20, (n.height * inf * view.scale) / 2) + touchPad;
+
+        const dx = Math.abs(sx - nodeScreenX);
+        const dy = Math.abs(sy - nodeScreenY);
+        if (dx <= halfW && dy <= halfH) {
+          const d = Math.hypot(dx, dy);
+          if (d < bestDist) {
+            bestDist = d;
+            bestNode = n;
+          }
         }
+      }
+      return { node: bestNode, worldPoint: p };
+    };
+
+    const onPointerDown = e => {
+      if (window.scrollY > height * 0.85) return;
+      if (e.target.closest('a, button, input, textarea, header')) return;
+      lastInteractionTime.current = performance.now();
+      const isTouch = e.pointerType === 'touch';
+      const { node, worldPoint } = findNodeAtClientPoint(e.clientX, e.clientY, isTouch);
+      if (node) {
+        dragging = node;
+        node.fx = worldPoint.x;
+        node.fy = worldPoint.y;
       }
       scheduleFrame();
     };
 
     const onPointerMove = e => {
-      // If user has scrolled well past the hero graph, no need to wake physics on mouse move
       if (window.scrollY > height * 1.1 && !dragging) return;
       lastInteractionTime.current = performance.now();
       const rect = canvas.getBoundingClientRect();
-      screenMouseRef.current = { x: (e.clientX - rect.left) / width, y: (e.clientY - rect.top) / height };
-      const p = { x: (e.clientX - rect.left - view.x) / view.scale, y: (e.clientY - rect.top - view.y) / view.scale };
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      screenMouseRef.current = { x: sx / width, y: sy / height };
+      const p = { x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale };
       mousePos.x = p.x;
       mousePos.y = p.y;
       if (dragging) {
@@ -455,6 +491,40 @@ const SkillsGraph2D = () => {
         lastInteractionTime.current = performance.now();
         scheduleFrame();
       }
+    };
+
+    // Dedicated non-passive touch handlers so iOS/Android don't cancel node drags into page scrolls
+    const onTouchStart = e => {
+      if (window.scrollY > height * 0.85) return;
+      if (e.target.closest('a, button, input, textarea, header')) return;
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      lastInteractionTime.current = performance.now();
+      const { node, worldPoint } = findNodeAtClientPoint(t.clientX, t.clientY, true);
+      if (node) {
+        dragging = node;
+        node.fx = worldPoint.x;
+        node.fy = worldPoint.y;
+        if (e.cancelable) e.preventDefault();
+      }
+      scheduleFrame();
+    };
+
+    const onTouchMove = e => {
+      if (!dragging || e.touches.length !== 1) return;
+      if (e.cancelable) e.preventDefault();
+      const t = e.touches[0];
+      lastInteractionTime.current = performance.now();
+      const rect = canvas.getBoundingClientRect();
+      const sx = t.clientX - rect.left;
+      const sy = t.clientY - rect.top;
+      screenMouseRef.current = { x: sx / width, y: sy / height };
+      const p = { x: (sx - view.x) / view.scale, y: (sy - view.y) / view.scale };
+      mousePos.x = p.x;
+      mousePos.y = p.y;
+      dragging.fx = p.x;
+      dragging.fy = p.y;
+      scheduleFrame();
     };
 
     const onScroll = () => {
@@ -508,6 +578,8 @@ const SkillsGraph2D = () => {
 
       const isActivePhysics = (now - lastInteractionTime.current <= activeDurationMs) || Boolean(dragging);
       let energy = 0;
+      const isMobile = width < 768;
+      const edgeMargin = isMobile ? 24 : 50;
 
       if (isActivePhysics) {
         const nodes = nodes_sim_ref.current;
@@ -565,11 +637,12 @@ const SkillsGraph2D = () => {
           else if (sy > height - edgeMargin) a.ay -= (edgeRepelK * (1 - (height - sy) / edgeMargin)) / view.scale;
         }
 
-        const cx = (width + (width >= 768 && !focusModeRef.current ? 320 : 0)) / 2;
+        const cx = (width + (!isMobile && !focusModeRef.current ? 320 : 0)) / 2;
         const cy = height / 2;
+        const yAspectPull = isMobile ? centerK * 1.6 : centerK * 4;
         nodes.forEach(n => {
           n.ax += (cx - n.x) * centerK;
-          n.ay += (cy - n.y) * (centerK * 4);
+          n.ay += (cy - n.y) * yAspectPull;
           if (n.hoverInfluence > 1) {
             n.ax += (cx - n.x) * (n.hoverInfluence - 1) * 0.08;
             n.ay += (cy - n.y) * (n.hoverInfluence - 1) * 0.08;
@@ -600,18 +673,21 @@ const SkillsGraph2D = () => {
           minY = Math.min(minY, n.y - n.height / 2);
           maxY = Math.max(maxY, n.y + n.height / 2);
         });
+        const availW = isMobile ? width - 32 : width - (!focusModeRef.current ? 320 : 0) - 200;
+        const availH = isMobile ? height - 180 : height - 500;
+        const minScale = isMobile ? 0.42 : 0.6;
         const targetScale = Math.max(
-          0.6,
+          minScale,
           Math.min(
             1.5,
             Math.min(
-              (width - (width >= 768 && !focusModeRef.current ? 320 : 0) - 200) / (maxX - minX || 100),
-              (height - 500) / (maxY - minY || 100)
+              Math.max(120, availW) / (maxX - minX || 100),
+              Math.max(160, availH) / (maxY - minY || 100)
             )
           )
         );
-        const targetX = (width + (width >= 768 && !focusModeRef.current ? 320 : 0)) / 2 - targetScale * ((minX + maxX) / 2);
-        const targetY = height / 2 - targetScale * ((minY + maxY) / 2);
+        const targetX = cx - targetScale * ((minX + maxX) / 2);
+        const targetY = (isMobile ? height * 0.52 : height / 2) - targetScale * ((minY + maxY) / 2);
         view.vx = (view.vx + (targetX - view.x) * viewSpringK) * viewDamping;
         view.vy = (view.vy + (targetY - view.y) * viewSpringK) * viewDamping;
         view.vs = (view.vs + (targetScale - view.scale) * viewSpringK) * viewDamping;
@@ -630,7 +706,7 @@ const SkillsGraph2D = () => {
       // Only rasterize 2D canvas & upload texture to GPU when nodes actually moved or resized
       if (textureDirty) {
         const nodes = nodes_sim_ref.current;
-        const cx = (width + (width >= 768 && !focusModeRef.current ? 320 : 0)) / 2;
+        const cx = (width + (!isMobile && !focusModeRef.current ? 320 : 0)) / 2;
         const cy = height / 2;
         const ctx2d = glState.current.offscreenCtx || canvas.getContext('2d');
         ctx2d.setTransform(texScale, 0, 0, texScale, 0, 0);
@@ -684,13 +760,13 @@ const SkillsGraph2D = () => {
 
           if (n.depth === 0) {
             if (rootImageRef.current) {
-              const size = (window.innerWidth < 768 ? 120 : 200) * n.hoverInfluence;
+              const size = (isMobile ? 120 : 200) * n.hoverInfluence;
               const aspect = rootImageRef.current.width / rootImageRef.current.height;
               const h = size;
               const w = size * aspect;
               ctx2d.drawImage(rootImageRef.current, n.x - w / 2, n.y - h / 2, w, h);
             } else {
-              const fontSize = (window.innerWidth < 768 ? 50 : 100) * n.hoverInfluence;
+              const fontSize = (isMobile ? 50 : 100) * n.hoverInfluence;
               ctx2d.font = `900 ${fontSize}px "Inter", sans-serif`;
               ctx2d.textAlign = 'center';
               ctx2d.textBaseline = 'middle';
@@ -702,7 +778,7 @@ const SkillsGraph2D = () => {
               ctx2d.letterSpacing = '0px';
             }
           } else {
-            const fontSize = (window.innerWidth < 768 ? 14 : 11) * n.hoverInfluence;
+            const fontSize = (isMobile ? 13 : 11) * n.hoverInfluence;
             ctx2d.font = `600 ${fontSize}px "Inter", sans-serif`;
             ctx2d.textAlign = 'center';
             ctx2d.textBaseline = 'bottom';
@@ -749,19 +825,30 @@ const SkillsGraph2D = () => {
       }
     }
 
-    resize();
-    window.addEventListener('resize', resize);
+    const onResize = () => resize(false);
+    resize(true);
+    window.addEventListener('resize', onResize);
     window.addEventListener('pointerdown', onPointerDown, { passive: true });
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp, { passive: true });
+    window.addEventListener('pointercancel', onPointerUp, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: false });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onPointerUp, { passive: true });
+    window.addEventListener('touchcancel', onPointerUp, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onPointerUp);
+      window.removeEventListener('touchcancel', onPointerUp);
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       if (raf !== null) cancelAnimationFrame(raf);
@@ -770,7 +857,7 @@ const SkillsGraph2D = () => {
 
   return (
     <div ref={containerRef} aria-hidden="true" className="fixed inset-0 w-full h-full z-0 bg-[#050505] overflow-hidden pointer-events-none">
-      <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" style={{ touchAction: 'none' }} />
+      <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full" />
     </div>
   );
 };
