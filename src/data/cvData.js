@@ -98,10 +98,10 @@ export const cvData = {
       period: "September 2025 - Present",
       tags: ["testing", "verification", "EMVCo", "VISA", "AMEX", "PURE", "CCD", "python", "LLM"],
       highlights: [
-        "Intern (full-time) Sep 2025 - Sep 2026; Test Analyst (part-time) Sep 2026 - Present. Guildford, on-site.",
-        "Type Approval campaigns for EMVCo Contact Level 2 (EMV L2) and Contactless kernels (VISA/AMEX), plus card testing per PURE and CCD.",
-        "Wrote custom scripts that parse vendor-locked tool logs into required reporting documents.",
-        "Built a local LLM PDF spec parser that uses fewer tokens than pypdf."
+        "Progressed from a full-time intern (Sep 2025 - Sep 2026) to part-time Test Analyst (Sep 2026 - Present), working on-site in Guildford.",
+        "Supported Type Approval campaigns where payment kernels had to meet scheme requirements, testing EMVCo Contact Level 2 and VISA/AMEX contactless kernels alongside PURE and CCD cards.",
+        "Vendor-locked testing tools made logs difficult to use in reports; wrote custom parsers to turn them into the required reporting documents.",
+        "To reduce token use when working with PDF specifications, built a local LLM parser that uses fewer tokens than pypdf."
       ]
     },
     {
@@ -110,9 +110,9 @@ export const cvData = {
       period: "September 2024 - Present",
       tags: ["space", "satellite", "TT&C", "computer-vision", "AprilTags", "C++", "Next.js", "Cloudflare", "ECSS"],
       highlights: [
-        "VP Missions (May 2026 - Present): mentor non-rocketry competition teams (Olympus Rover, Satellite Design, Airbus Space). Migrated the society site from WordPress to Cloudflare.",
-        "Team Lead and TT&C Lead, Satellite Design Competition (Sep 2025 - Jul 2026): 3U CubeSat lunar simulation with stereoscopic computer-vision depth maps. Ran ECSS (European Cooperation for Space Standardization) PDR/CDR. Finished 6th of 20 nationally.",
-        "TT&C (telemetry, tracking and command) and Payload Lead (Sep 2024 - Jul 2025): Best Innovation Award (Airbus Defence and Space, Stevenage). AprilTags CV navigation with attitude/orbit control, link margin under mass/budget, low-latency video, and Next.js + C++ ground station."
+        "As VP Missions (May 2026 - Present), mentored the Olympus Rover, Satellite Design, and Airbus Space competition teams; also moved the society website from WordPress to Cloudflare.",
+        "As Team Lead and TT&C Lead (Sep 2025 - Jul 2026), tackled depth mapping for a 3U CubeSat lunar simulation with stereoscopic computer vision, led ECSS PDR/CDR reviews, and finished 6th out of 20 teams nationally.",
+        "As TT&C and Payload Lead (Sep 2024 - Jul 2025), addressed navigation and communications within mass and budget constraints using AprilTags, attitude/orbit control, link-margin analysis, low-latency video, and a Next.js/C++ ground station; the team received the Airbus Defence and Space Best Innovation Award."
       ]
     },
     {
@@ -120,14 +120,18 @@ export const cvData = {
       company: "University of Surrey",
       period: "September 2024 - June 2025",
       tags: ["university", "mentoring", "mathematics", "probability", "automata"],
-      description: "Supported first-year students in discrete mathematics, automata theory, and probability during COM1026 lab sessions, alongside academic mentoring through the Buddy Scheme."
+      highlights: [
+        "To help first-year students work through abstract course material, supported COM1026 lab sessions in discrete mathematics, automata theory, and probability, alongside ongoing academic mentoring through the Buddy Scheme."
+      ]
     },
     {
       role: "Computer Vision Lead",
       company: "Sports Vision",
       period: "2023 - 2024",
       tags: ["computer-vision", "yolo", "python", "pyside", "blender", "synthetic-data", "backend"],
-      description: "Built the computer vision backend for a visual snooker scoring system using YOLO. Created a custom image annotation tool in PySide6 and generated synthetic training data via the Blender Python API."
+      highlights: [
+        "To power a visual snooker scoring system, built a YOLO computer-vision backend and the supporting data workflow: a PySide6 annotation tool and synthetic training data generated with Blender's Python API."
+      ]
     },
     {
       role: "Software Developer",
@@ -135,10 +139,10 @@ export const cvData = {
       period: "October 2020 - January 2023",
       tags: ["fintech", "aws", "php", "clojure", "vue", "mysql", "s3", "apache", "ec2", "flutter", "ios"],
       highlights: [
-        "Built and maintained web features for Finmonster, an SME loan-matching fintech platform.",
-        "Automated server management tasks on AWS using Shell scripting.",
-        "Executed a full stack migration across PHP, jQuery, Vue.js, Clojure, MySQL, S3, and Apache on EC2.",
-        "Developed mobile applications in Flutter and native iOS (migrating legacy React Native apps), and handled client requirements and proposals."
+        "Finmonster needed ongoing product development as an SME loan-matching platform; built and maintained its web features.",
+        "Automated AWS server-management tasks with shell scripts to replace manual execution.",
+        "Delivered a full-stack migration across PHP, jQuery, Vue.js, Clojure, MySQL, S3, and Apache on EC2.",
+        "To move beyond legacy React Native apps, developed mobile applications in Flutter and native iOS, while also gathering client requirements and preparing proposals."
       ]
     },
     {
@@ -146,35 +150,45 @@ export const cvData = {
       company: "Freelance",
       period: "Q2 2021 - Q1 2023",
       tags: ["teaching", "english", "stem", "tutoring"],
-      description: "Tutored Years 6-8 students in English with a focus on STEM terminology and technical vocabulary."
+      highlights: [
+        "To help Years 6-8 students use technical language with confidence, tutored English with a focus on STEM terminology and vocabulary."
+      ]
     },
     {
       role: "Part-Time Web Developer",
       company: "Tommax",
       period: "January 2020 - October 2021",
       tags: ["e-commerce", "php", "client", "translation", "marketing"],
-      description: "Worked with clients on e-commerce solutions and PHP web development projects, alongside translation and region-specific subtitling for marketing campaigns."
+      highlights: [
+        "Worked with clients to deliver e-commerce solutions and PHP development, then adapted marketing campaigns for regional audiences through translation and subtitling."
+      ]
     },
     {
       role: "Team Member",
       company: "Barangaroo Promenade Pavilion Design Competition",
       period: "Summer 2020",
       tags: ["architecture", "competition", "parametric-design", "pavilion"],
-      description: "Co-designed a competition pavilion entry for a public shelter based on a parametric interpretation of the Aboriginal coolamon."
+      highlights: [
+        "For a public-shelter design competition, co-designed a pavilion entry around a parametric interpretation of the Aboriginal coolamon."
+      ]
     },
     {
       role: "Audio Assistant",
       company: "“Innonation” Live Music Company",
       period: "December 2018",
       tags: ["audio", "events", "live", "installation"],
-      description: "Installed and operated live audio equipment for concerts, weddings, and corporate events across Hong Kong."
+      highlights: [
+        "To support live performances and events, installed and operated audio equipment for concerts, weddings, and corporate events across Hong Kong."
+      ]
     },
     {
       role: "Finalist",
       company: "HKU Decacorn Entrepreneurial Camp Case Competition",
       period: "June 2018",
       tags: ["entrepreneurship", "competition", "startup", "pitch"],
-      description: "Pitched a startup proposal for an integrated knowledge and graduate headhunting platform within 24 hours, advised by HKU mentors."
+      highlights: [
+        "With 24 hours to develop a case, shaped and pitched a proposal for an integrated knowledge and graduate headhunting platform with guidance from HKU mentors, reaching finalist stage."
+      ]
     }
   ],
   projects: [
