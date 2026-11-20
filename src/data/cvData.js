@@ -98,7 +98,7 @@ export const cvData = {
       period: "September 2025 - Present",
       tags: ["testing", "verification", "EMVCo", "VISA", "AMEX", "PURE", "CCD", "python", "LLM"],
       highlights: [
-        "Progressed from a full-time intern (Sep 2025 - Sep 2026) to part-time Test Analyst (Sep 2026 - Present), working on-site in Guildford.",
+        "Progressed from a full-time placement (Sep 2025 - Sep 2026) to part-time Test Analyst (Sep 2026 - Present), working on-site in Guildford.",
         "Supported Type Approval campaigns where payment kernels had to meet scheme requirements, testing EMVCo Contact Level 2 and VISA/AMEX contactless kernels alongside PURE and CCD cards.",
         "Vendor-locked testing tools made logs difficult to use in reports; wrote custom parsers to turn them into the required reporting documents.",
         "To reduce token use when working with PDF specifications, built a local LLM parser that uses fewer tokens than pypdf."
