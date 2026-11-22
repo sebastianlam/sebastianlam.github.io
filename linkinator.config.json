@@ -3,6 +3,7 @@
   "silent": true,
   "skip": [
     "https?://(www\\.)?linkedin\\.com/.*",
-    "https?://peryton\\.space.*"
+    "https?://peryton\\.space.*",
+    "https?://sebastianlam\\.github\\.io/.*"
   ]
 }

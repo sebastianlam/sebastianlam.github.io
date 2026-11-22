@@ -1,14 +1,22 @@
 import React from 'react';
 import { m } from 'framer-motion';
 
-const Section = ({ title, children, id, className = "", innerClassName = "", hideTitle = false }) => {
+const Section = ({
+  title,
+  children,
+  id,
+  className = "",
+  innerClassName = "",
+  hideTitle = false,
+  disableReveal = false,
+}) => {
   return (
     <m.section
       id={id}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 0.7, ease: "easeInOut" }}
+      initial={disableReveal ? false : { opacity: 0, y: 20 }}
+      whileInView={disableReveal ? undefined : { opacity: 1, y: 0 }}
+      viewport={disableReveal ? undefined : { once: true, margin: "-10%" }}
+      transition={disableReveal ? undefined : { duration: 0.7, ease: "easeInOut" }}
       className={`relative scroll-mt-28 md:scroll-mt-12 ${className}`}
     >
       {!hideTitle && (

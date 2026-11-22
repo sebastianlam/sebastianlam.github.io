@@ -228,6 +228,7 @@ function App() {
                 title="Skills"
                 id="skills"
                 hideTitle
+                disableReveal
                 className="min-h-[calc(100svh-6.5rem)] md:h-screen -mt-8 md:-mt-12 !py-0 !border-b-0"
                 innerClassName="h-full min-h-[calc(100svh-6.5rem)] md:min-h-screen"
               >
