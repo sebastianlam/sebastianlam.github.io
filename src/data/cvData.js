@@ -232,11 +232,11 @@ export const cvData = {
       title: "3U CubeSat TT&C & Ground Station",
       status: "Airbus Best Innovation Award",
       tags: ["C++", "Next.js", "TT&C", "AprilTags", "ECSS"],
-      description: "Telemetry, tracking, command, and payload navigation stack for UKSEDS Satellite Design Competition—combining link-margin engineering under mass/budget limits, AprilTags AOCS navigation, low-latency video, and a Next.js/C++ ground station, followed by stereoscopic lunar depth mapping (6th of 20 nationally)."
+      description: "Telemetry, tracking, command, and payload navigation stack for UKSEDS Satellite Design Competition, combining link-margin engineering under mass/budget limits, AprilTags AOCS navigation, low-latency video, and a Next.js/C++ ground station, followed by stereoscopic lunar depth mapping (6th of 20 nationally)."
     },
     {
       title: "Snooker Vision & Synthetic Data Pipeline",
-      status: "Sports Vision (2023–2024)",
+      status: "Sports Vision (2023 - 2024)",
       tags: ["YOLO", "Python", "PySide6", "Blender API"],
       description: "End-to-end computer vision workflow for automated snooker scoring: YOLO detection backend, custom PySide6 desktop annotation tool, and procedural synthetic training datasets rendered via Blender's Python API."
     },
@@ -270,7 +270,7 @@ export const cvData = {
   bio: [
     "I started my journey in parametric architecture in Sydney, where I first learned to appreciate the rhythm of precise design. Over time, I realised that my interest in how structures are built was naturally shifting towards the digital systems that power them. I've always been driven by a quiet curiosity to understand not just how a system works, but how it handles failure and where its true limits lie.",
     "Moving from the drafting table to the terminal felt less like a career change and more like a return to first principles. Whether I'm working on satellite link resilience, experimenting with computer vision backends, or exploring the functional patterns of Clojure, I try to bring a sense of spatial logic to my code. I aim for software that is both structurally sound and open to the kind of creative improvisation I find in music.",
-    "When I’m not at my desk, I’m usually trying to solve a different set of problems on a bouldering wall or immersing myself in flight simulation—places where my interest in telemetry and physics feels most at home. This portfolio isn't a finished story, but a record of my attempts to bridge the gap between low-level engineering and the broader challenges of space and fintech."
+    "When I’m not at my desk, I’m usually trying to solve a different set of problems on a bouldering wall or immersing myself in flight simulation, places where my interest in telemetry and physics feels most at home. This portfolio isn't a finished story, but a record of my attempts to bridge the gap between low-level engineering and the broader challenges of space and fintech."
   ],
   education: [
     {

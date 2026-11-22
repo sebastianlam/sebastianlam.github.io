@@ -190,7 +190,7 @@ export function renderAppHtml() {
           ${cvData.certifications
             .map(
               (cert) => `<li class="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-0.5">
-                <span><strong class="font-semibold text-white">${esc(cert.title)}</strong><span class="text-white/75"> — ${esc(cert.issuer)}</span></span>
+                <span><strong class="font-semibold text-white">${esc(cert.title)}</strong><span class="text-white/75">, ${esc(cert.issuer)}</span></span>
                 <span class="text-xs font-mono text-white/75 shrink-0">${esc(cert.date)}</span>
               </li>`
             )
