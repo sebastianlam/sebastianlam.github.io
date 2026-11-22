@@ -32,6 +32,6 @@ jobs:
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
       - run: lhci assert --config=lighthouserc.json
-      - run: axe http://127.0.0.1:4173 --chrome-path "${{ steps.setup-chrome.outputs.chrome-path }}" --chromedriver-path "${{ steps.setup-chrome.outputs.chromedriver-path }}" --exit --stdout
+      - run: axe http://127.0.0.1:4173 --chrome-path "${{ steps.setup-chrome.outputs.chrome-path }}" --chromedriver-path "${{ steps.setup-chrome.outputs.chromedriver-path }}" --chrome-options="no-sandbox,disable-dev-shm-usage" --exit --stdout
       - run: html-validate dist/index.html
       - run: linkinator http://localhost:4173 --config linkinator.config.json
