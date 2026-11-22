@@ -1,15 +1,14 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 const Section = ({ title, children, id, className = "", innerClassName = "", hideTitle = false }) => {
   return (
-    <motion.section 
-      layout
+    <m.section
       id={id}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 0.8, ease: "easeInOut" }}
+      transition={{ duration: 0.7, ease: "easeInOut" }}
       className={`relative scroll-mt-28 md:scroll-mt-12 ${className}`}
     >
       {!hideTitle && (
@@ -23,7 +22,7 @@ const Section = ({ title, children, id, className = "", innerClassName = "", hid
       <div className={`relative z-10 ${innerClassName}`}>
         {children}
       </div>
-    </motion.section>
+    </m.section>
   );
 };
 

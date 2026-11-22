@@ -1,4 +1,4 @@
-# Sebastian Lam - Portfolio
+# Jim Lam - Portfolio
 
 A high-performance personal portfolio and interactive CV built with modern web technologies.
 

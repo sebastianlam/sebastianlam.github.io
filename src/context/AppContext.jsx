@@ -1,28 +1,49 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  const [theme, setTheme] = useState('dark');
   const [focusMode, setFocusMode] = useState(false);
+  const scrollHandlerRef = useRef(null);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    
-    if (theme === 'auto') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.add(isDark ? 'dark' : 'light');
-    } else {
-      root.classList.add(theme);
+  const registerScrollHandler = useCallback((handler) => {
+    scrollHandlerRef.current = handler;
+  }, []);
+
+  const scrollToTarget = useCallback((target) => {
+    if (scrollHandlerRef.current) {
+      scrollHandlerRef.current(target);
+      return;
     }
-  }, [theme]);
+
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior = prefersReduced ? 'auto' : 'smooth';
+
+    if (target === 0 || target === '#top') {
+      window.scrollTo({ top: 0, behavior });
+      return;
+    }
+
+    const id = typeof target === 'string' ? target.replace(/^#/, '') : '';
+    const el = id ? document.getElementById(id) : null;
+    if (el) {
+      const offset = window.innerWidth < 768 ? 104 : 48;
+      const top = Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset);
+      window.scrollTo({ top, behavior });
+    }
+  }, []);
 
   return (
-    <AppContext.Provider value={{ 
-      theme, setTheme, 
-      focusMode, setFocusMode 
-    }}>
+    <AppContext.Provider
+      value={{
+        focusMode,
+        setFocusMode,
+        registerScrollHandler,
+        scrollToTarget,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

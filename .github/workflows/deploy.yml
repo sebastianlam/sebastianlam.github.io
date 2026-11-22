@@ -15,7 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  audit:
+    uses: ./.github/workflows/audit.yml
+
   deploy:
+    needs: audit
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -41,4 +45,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
