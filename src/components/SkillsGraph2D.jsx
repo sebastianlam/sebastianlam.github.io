@@ -65,12 +65,12 @@ const SkillsGraph2D = () => {
     const canvas = canvasRef.current;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
-    const texScale = Math.min(dpr, 1.25);
+    const isInitialMobile = window.innerWidth < 768;
+    const texScale = Math.min(dpr, isInitialMobile ? 1.5 : 2.0);
     let width = window.innerWidth;
     let height = window.innerHeight;
     let texW = Math.max(1, Math.round(width * texScale));
     let texH = Math.max(1, Math.round(height * texScale));
-    const isInitialMobile = width < 768;
 
     glState.current.samples = isInitialMobile ? 12 : 18;
 
@@ -141,7 +141,7 @@ const SkillsGraph2D = () => {
           }
           vec4 finalColor = color / total;
           float grain = (random(vUv + fract(uTime)) - 0.5) * 0.015;
-          finalColor.rgb += grain * (blurAmount / max(uRadius, 1.0));
+          finalColor.rgb += grain * finalColor.a * (blurAmount / max(uRadius, 1.0));
           finalColor.rgb *= (1.0 - smoothstep(0.4, 0.8, dist) * 0.1);
           gl_FragColor = finalColor;
         }
@@ -181,6 +181,7 @@ const SkillsGraph2D = () => {
 
       const texture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -790,6 +791,8 @@ const SkillsGraph2D = () => {
         if (ctx2d) {
           const drawScale = useWebGL ? texScale : dpr;
           ctx2d.setTransform(drawScale, 0, 0, drawScale, 0, 0);
+          ctx2d.imageSmoothingEnabled = true;
+          ctx2d.imageSmoothingQuality = 'high';
           ctx2d.clearRect(0, 0, width, height);
           ctx2d.save();
           ctx2d.translate(view.x, view.y);
@@ -809,17 +812,17 @@ const SkillsGraph2D = () => {
             const midY = (l.source.y + l.target.y) / 2;
             const cpX = midX + (cx - midX) * 0.15;
             const cpY = midY + (cy - midY) * 0.15;
-            const w = (l.source.depth === 0 ? 3 : l.source.depth === 1 ? 1.5 : 0.8) / view.scale;
+            const w = (l.source.depth === 0 ? 3 : l.source.depth === 1 ? 1.5 : 0.9) / view.scale;
             ctx2d.lineCap = 'round';
             ctx2d.lineJoin = 'round';
             ctx2d.beginPath();
             ctx2d.moveTo(l.source.x, l.source.y);
             ctx2d.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
-            ctx2d.strokeStyle = setAlpha(color, 0.04);
-            ctx2d.lineWidth = w * 4;
+            ctx2d.strokeStyle = setAlpha(color, 0.14);
+            ctx2d.lineWidth = w * 3.5;
             ctx2d.stroke();
-            ctx2d.strokeStyle = setAlpha(color, 0.15);
-            ctx2d.lineWidth = w;
+            ctx2d.strokeStyle = setAlpha(color, 0.52);
+            ctx2d.lineWidth = w * 1.1;
             ctx2d.stroke();
           });
 
