@@ -2,7 +2,7 @@ export const navItems = [
   { label: 'Skills', id: 'skills' },
   { label: 'Background', id: 'bio' },
   { label: 'Experience', id: 'experience' },
-  { label: 'Projects', id: 'projects' },
+  { label: 'Systems', id: 'projects' },
   { label: 'Education', id: 'education' },
   { label: 'Interests', id: 'interests' },
 ];
@@ -19,6 +19,11 @@ export const cvData = {
     alumni: "University of Surrey",
     location: "Guildford / Hong Kong",
   },
+  heroHighlights: [
+    { label: "EMVCo L2 Verification @ Fime", href: "#experience" },
+    { label: "CubeSat TT&C · Airbus Innovation Award", href: "#projects" },
+    { label: "YOLO + Blender CV Pipeline", href: "#projects" },
+  ],
   skills: [
     // Languages
     { name: "C / C++", category: "Languages", level: 90, children: [
@@ -224,23 +229,41 @@ export const cvData = {
   ],
   projects: [
     {
+      title: "3U CubeSat TT&C & Ground Station",
+      status: "Airbus Best Innovation Award",
+      tags: ["C++", "Next.js", "TT&C", "AprilTags", "ECSS"],
+      description: "Telemetry, tracking, command, and payload navigation stack for UKSEDS Satellite Design Competition—combining link-margin engineering under mass/budget limits, AprilTags AOCS navigation, low-latency video, and a Next.js/C++ ground station, followed by stereoscopic lunar depth mapping (6th of 20 nationally)."
+    },
+    {
+      title: "Snooker Vision & Synthetic Data Pipeline",
+      status: "Sports Vision (2023–2024)",
+      tags: ["YOLO", "Python", "PySide6", "Blender API"],
+      description: "End-to-end computer vision workflow for automated snooker scoring: YOLO detection backend, custom PySide6 desktop annotation tool, and procedural synthetic training datasets rendered via Blender's Python API."
+    },
+    {
+      title: "EMVCo Log & Local LLM Spec Parser",
+      status: "Fime Internal Tooling",
+      tags: ["Python", "Local LLM", "EMVCo", "Parsing"],
+      description: "Automated verification tooling converting vendor-locked payment test logs into scheme reporting documents, paired with a local LLM PDF specification parser designed to consume fewer tokens than pypdf."
+    },
+    {
       title: "peryton.space",
       status: "Live",
-      tags: ["cloudflare", "web", "migration", "space"],
+      tags: ["Cloudflare", "Web", "Migration"],
       description: "Peryton Space society website, rebuilt and migrated from WordPress onto Cloudflare.",
       link: "https://peryton.space"
     },
     {
       title: "DrunkGPT",
       status: "Open Source",
-      tags: ["cli", "accessibility", "voice", "llm", "tts", "stt"],
+      tags: ["CLI", "Voice", "LLM", "TTS", "STT"],
       description: "CLI LLM client with a voice interface, built when OpenAI opened the public GPT-3.5 API.",
       link: "https://github.com/sebastianlam/drunkgpt"
     },
     {
       title: "URL+",
       status: "Open Source",
-      tags: ["clojurescript", "plugin", "logseq", "tailwindcss", "rum"],
+      tags: ["ClojureScript", "Logseq", "Tailwind CSS"],
       description: "Contributor to the ClojureScript Logseq plugin for fetching URLs and displaying dictionary-style definitions."
     }
   ],

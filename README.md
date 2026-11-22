@@ -1,44 +1,27 @@
 # Jim Lam - Portfolio
 
-A high-performance personal portfolio and interactive CV built with modern web technologies.
+A zero-runtime-dependency personal portfolio and interactive CV: pre-rendered static HTML from structured data, paired with a deferred GPU-native WebGL skills graph.
 
-## 🚀 Tech Stack
+## Tech Stack
 
-- **Framework**: [React 19](https://react.dev/)
-- **Build Tool**: [Vite 6](https://vitejs.dev/)
+- **Architecture**: Pre-rendered static HTML via custom Vite plugin (works with JavaScript disabled) + vanilla JS interactive island
+- **Build Tool**: [Vite 6](https://vite.dev/)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Animation**: Native CSS transitions + [Lenis](https://github.com/darkroomengineering/lenis) (Smooth Scroll)
-- **Visuals**: WebGL (custom shader background) with adaptive performance monitoring
-- **Icons**: [Lucide React](https://lucide.dev/)
+- **Visuals**: GPU-native WebGL analytic SDF Bézier ribbons + separable 2-pass radial depth-of-field blur (0% idle CPU/GPU)
 
-## ✨ Key Features
+## Key Features
 
-- **Adaptive WebGL Background**: A custom skill-graph visualization that adjusts its rendering quality based on the user's frame rate.
-- **Focus Mode**: A distraction-free reading experience for deeper exploration of the CV content.
-- **Dynamic Content**: Data-driven structure using centralized CV data for easy updates.
-- **Performance Optimized**: High scores in Lighthouse for Performance, Accessibility, and SEO.
+- **Zero Framework Overhead**: No client UI framework or scroll hijack library; main JS entry is ~2 KB.
+- **GPU-Native Skills Graph**: Analytic SDF antialiasing for smooth curves at any DPI, separable 2-pass bokeh blur, and automatic idle sleep.
+- **Focus Mode**: Distraction-free reading mode that collapses the desktop sidebar.
+- **CI-Gated Deployment**: GitHub Pages deployment is gated on Lighthouse CI, `axe`, `html-validate`, and `linkinator`.
 
-## 🛠️ Getting Started
+## Getting Started
 
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm or yarn
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/sebastianlam/sebastianlam.github.io.git
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
+```bash
+npm install
+npm run dev
+```
 
 ### Building for Production
 
@@ -47,6 +30,6 @@ npm run build
 npm run preview
 ```
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see [LICENSE](LICENSE).
