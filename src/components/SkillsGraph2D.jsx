@@ -66,13 +66,19 @@ const SkillsGraph2D = () => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
     const isInitialMobile = window.innerWidth < 768;
-    const texScale = Math.min(dpr, isInitialMobile ? 1.5 : 2.0);
+    const computeTexScale = (w, h) => {
+      // Supersample offscreen 2D canvas (min 2x on desktop, up to 3x on Retina) within WebGL texture limits
+      const desired = w < 768 ? Math.max(1.75, dpr) : Math.max(2.0, Math.min(dpr * 1.5, 3.0));
+      const maxDim = Math.max(w, h, 1);
+      return Math.min(desired, 4096 / maxDim);
+    };
     let width = window.innerWidth;
     let height = window.innerHeight;
+    let texScale = computeTexScale(width, height);
     let texW = Math.max(1, Math.round(width * texScale));
     let texH = Math.max(1, Math.round(height * texScale));
 
-    glState.current.samples = isInitialMobile ? 12 : 18;
+    glState.current.samples = isInitialMobile ? 16 : 32;
 
     // --- 1. WebGL & Offscreen Canvas Initialization ---
     const initWebGL = () => {
@@ -100,32 +106,56 @@ const SkillsGraph2D = () => {
         }
       `;
       const fsSource = `
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+        #else
         precision mediump float;
+        #endif
         varying vec2 vUv;
         uniform sampler2D uTexture;
         uniform vec2 uResolution;
+        uniform vec2 uCanvasRes;
         uniform float uRadius;
         uniform float uEnergy;
         uniform float uScrollBlur;
         uniform float uTime;
         uniform int uSamples;
         uniform vec2 uMouse;
-        float random(vec2 uv) { return fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453); }
+
+        // Blue-noise-like Interleaved Gradient Noise for smooth, non-speckled bokeh on thin curves
+        float ign(vec2 px) {
+          return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.00583715))));
+        }
+
+        // 4-tap Rotated Grid Supersampling (RGSS) downsample for crisp, stair-step-free diagonal links
+        vec4 sampleRGSS(vec2 uv) {
+          vec2 px = 1.0 / uCanvasRes;
+          vec4 c = vec4(0.0);
+          c += texture2D(uTexture, uv + vec2( 0.125,  0.375) * px);
+          c += texture2D(uTexture, uv + vec2(-0.125, -0.375) * px);
+          c += texture2D(uTexture, uv + vec2( 0.375, -0.125) * px);
+          c += texture2D(uTexture, uv + vec2(-0.375,  0.125) * px);
+          return c * 0.25;
+        }
+
         void main() {
           vec2 center = uMouse;
           float dist = distance(vUv, center);
-          float blurAmount = (smoothstep(0.12, 0.55, dist) * uRadius) + uScrollBlur;
-          if (blurAmount < 0.25) {
-            gl_FragColor = texture2D(uTexture, vUv);
+          float blurAmount = (smoothstep(0.14, 0.58, dist) * uRadius) + uScrollBlur;
+          vec4 sharpColor = sampleRGSS(vUv);
+
+          if (blurAmount < 0.35) {
+            gl_FragColor = sharpColor;
             return;
           }
+
           vec4 color = vec4(0.0);
           float total = 0.0;
-          float goldenAngle = 2.39996;
-          float jitter = random(vUv) * 6.28;
-          for (int i = 0; i < 32; i++) {
+          float goldenAngle = 2.39996323;
+          float jitter = ign(gl_FragCoord.xy) * 6.2831853;
+          for (int i = 0; i < 36; i++) {
             if (i >= uSamples) break;
-            float r = sqrt(float(i) / float(uSamples)) * blurAmount;
+            float r = sqrt((float(i) + 0.5) / float(uSamples)) * blurAmount;
             float theta = float(i) * goldenAngle + jitter;
             vec2 offset = vec2(cos(theta), sin(theta)) * r / uResolution;
             if (mod(float(i), 4.0) < 1.0 && uEnergy > 0.02) {
@@ -139,10 +169,12 @@ const SkillsGraph2D = () => {
             }
             total += 1.0;
           }
-          vec4 finalColor = color / total;
-          float grain = (random(vUv + fract(uTime)) - 0.5) * 0.015;
+          vec4 blurColor = color / total;
+          float blend = smoothstep(0.35, 2.0, blurAmount);
+          vec4 finalColor = mix(sharpColor, blurColor, blend);
+          float grain = (ign(gl_FragCoord.xy + fract(uTime) * 17.0) - 0.5) * 0.012;
           finalColor.rgb += grain * finalColor.a * (blurAmount / max(uRadius, 1.0));
-          finalColor.rgb *= (1.0 - smoothstep(0.4, 0.8, dist) * 0.1);
+          finalColor.rgb *= (1.0 - smoothstep(0.42, 0.85, dist) * 0.1);
           gl_FragColor = finalColor;
         }
       `;
@@ -189,6 +221,7 @@ const SkillsGraph2D = () => {
 
       const uniforms = {
         uResolution: gl.getUniformLocation(program, 'uResolution'),
+        uCanvasRes: gl.getUniformLocation(program, 'uCanvasRes'),
         uRadius: gl.getUniformLocation(program, 'uRadius'),
         uScrollBlur: gl.getUniformLocation(program, 'uScrollBlur'),
         uEnergy: gl.getUniformLocation(program, 'uEnergy'),
@@ -572,6 +605,7 @@ const SkillsGraph2D = () => {
       }
       width = newW;
       height = newH;
+      texScale = computeTexScale(width, height);
       texW = Math.max(1, Math.round(width * texScale));
       texH = Math.max(1, Math.round(height * texScale));
 
@@ -812,17 +846,21 @@ const SkillsGraph2D = () => {
             const midY = (l.source.y + l.target.y) / 2;
             const cpX = midX + (cx - midX) * 0.15;
             const cpY = midY + (cy - midY) * 0.15;
-            const w = (l.source.depth === 0 ? 3 : l.source.depth === 1 ? 1.5 : 0.9) / view.scale;
+            const w = (l.source.depth === 0 ? 3.0 : l.source.depth === 1 ? 1.7 : 1.25) / view.scale;
             ctx2d.lineCap = 'round';
             ctx2d.lineJoin = 'round';
             ctx2d.beginPath();
             ctx2d.moveTo(l.source.x, l.source.y);
             ctx2d.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
-            ctx2d.strokeStyle = setAlpha(color, 0.14);
-            ctx2d.lineWidth = w * 3.5;
+            // Smooth 3-layer Gaussian-like cross-section eliminates sub-pixel aliasing on thin curves
+            ctx2d.strokeStyle = setAlpha(color, 0.08);
+            ctx2d.lineWidth = w * 4.5;
             ctx2d.stroke();
-            ctx2d.strokeStyle = setAlpha(color, 0.52);
-            ctx2d.lineWidth = w * 1.1;
+            ctx2d.strokeStyle = setAlpha(color, 0.22);
+            ctx2d.lineWidth = w * 2.1;
+            ctx2d.stroke();
+            ctx2d.strokeStyle = setAlpha(color, 0.56);
+            ctx2d.lineWidth = w;
             ctx2d.stroke();
           });
 
@@ -887,11 +925,13 @@ const SkillsGraph2D = () => {
         gl.useProgram(program);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform2f(uniforms.uResolution, offscreenCanvas.width, offscreenCanvas.height);
+        gl.uniform2f(uniforms.uCanvasRes, canvas.width, canvas.height);
         gl.uniform1f(uniforms.uRadius, (prefersReducedMotion ? 0 : 10 + energy * 20) * texScale);
         gl.uniform1f(uniforms.uScrollBlur, Math.min(window.scrollY / 800, 1) * 40 * texScale);
         gl.uniform1f(uniforms.uEnergy, energy);
         gl.uniform1f(uniforms.uTime, now / 1000);
-        gl.uniform1i(uniforms.uSamples, glState.current.samples);
+        const renderSamples = isActivePhysics ? Math.min(glState.current.samples, isMobile ? 16 : 24) : (isMobile ? 20 : 36);
+        gl.uniform1i(uniforms.uSamples, renderSamples);
         gl.uniform2f(uniforms.uMouse, screenMouseRef.current.x, screenMouseRef.current.y);
         gl.enableVertexAttribArray(posLoc);
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
