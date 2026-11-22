@@ -52,9 +52,28 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+@keyframes chevronFloat {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 1;
+  }
+}
+
+.animate-chevron-float {
+  animation: chevronFloat 2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;
+  }
+  .animate-chevron-float {
+    animation: none;
+    opacity: 0.9;
   }
 }
 

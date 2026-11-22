@@ -1,5 +1,4 @@
-import React from 'react';
-import { m } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
 
 const Section = ({
   title,
@@ -10,14 +9,44 @@ const Section = ({
   hideTitle = false,
   disableReveal = false,
 }) => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(disableReveal);
+
+  useEffect(() => {
+    if (disableReveal || visible) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(true);
+      return;
+    }
+    const el = ref.current;
+    if (!el || !('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.01 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [disableReveal, visible]);
+
+  const revealClasses = disableReveal
+    ? ''
+    : visible
+      ? 'opacity-100 translate-y-0 transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none'
+      : 'opacity-0 translate-y-5 motion-reduce:opacity-100 motion-reduce:translate-y-0';
+
   return (
-    <m.section
+    <section
+      ref={ref}
       id={id}
-      initial={disableReveal ? false : { opacity: 0, y: 20 }}
-      whileInView={disableReveal ? undefined : { opacity: 1, y: 0 }}
-      viewport={disableReveal ? undefined : { once: true, margin: "-10%" }}
-      transition={disableReveal ? undefined : { duration: 0.7, ease: "easeInOut" }}
-      className={`relative scroll-mt-28 md:scroll-mt-12 ${className}`}
+      className={`relative scroll-mt-28 md:scroll-mt-12 ${revealClasses} ${className}`}
     >
       {!hideTitle && (
         <div className="flex items-center gap-3 sm:gap-4 mb-8 md:mb-12">
@@ -30,7 +59,7 @@ const Section = ({
       <div className={`relative z-10 ${innerClassName}`}>
         {children}
       </div>
-    </m.section>
+    </section>
   );
 };
 

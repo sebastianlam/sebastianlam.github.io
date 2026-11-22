@@ -7,7 +7,7 @@ A high-performance personal portfolio and interactive CV built with modern web t
 - **Framework**: [React 19](https://react.dev/)
 - **Build Tool**: [Vite 6](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **Animation**: [Framer Motion](https://www.framer.com/motion/) & [Lenis](https://github.com/darkroomengineering/lenis) (Smooth Scroll)
+- **Animation**: Native CSS transitions + [Lenis](https://github.com/darkroomengineering/lenis) (Smooth Scroll)
 - **Visuals**: WebGL (custom shader background) with adaptive performance monitoring
 - **Icons**: [Lucide React](https://lucide.dev/)
 

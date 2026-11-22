@@ -66,19 +66,28 @@ const SkillsGraph2D = () => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2.0);
     const isInitialMobile = window.innerWidth < 768;
-    const computeTexScale = (w, h) => {
-      // Supersample offscreen 2D canvas (min 2x on desktop, up to 3x on Retina) within WebGL texture limits
-      const desired = w < 768 ? Math.max(1.75, dpr) : Math.max(2.0, Math.min(dpr * 1.5, 3.0));
+
+    // Dual-resolution SSAA:
+    // - Interactive (dragging / animating): lightweight 1.15x-1.25x (~5 MB) for locked 60-120fps
+    // - Settled (idle): crisp 2.0x-2.5x SSAA (~14 MB, uploaded once) for vector-smooth curves
+    const computeScale = (w, h, highRes) => {
       const maxDim = Math.max(w, h, 1);
-      return Math.min(desired, 4096 / maxDim);
+      if (!highRes) {
+        const fast = w < 768 ? 1.0 : Math.min(dpr, 1.25);
+        return Math.min(fast, 1920 / maxDim);
+      }
+      const crisp = w < 768 ? Math.min(dpr, 1.5) : Math.max(2.0, Math.min(dpr * 1.25, 2.5));
+      return Math.min(crisp, (w < 768 ? 1440 : 2880) / maxDim);
     };
+
     let width = window.innerWidth;
     let height = window.innerHeight;
-    let texScale = computeTexScale(width, height);
+    let currentHighRes = true;
+    let texScale = computeScale(width, height, true);
     let texW = Math.max(1, Math.round(width * texScale));
     let texH = Math.max(1, Math.round(height * texScale));
 
-    glState.current.samples = isInitialMobile ? 16 : 32;
+    glState.current.samples = isInitialMobile ? 12 : 18;
 
     // --- 1. WebGL & Offscreen Canvas Initialization ---
     const initWebGL = () => {
@@ -122,7 +131,6 @@ const SkillsGraph2D = () => {
         uniform int uSamples;
         uniform vec2 uMouse;
 
-        // Blue-noise-like Interleaved Gradient Noise for smooth, non-speckled bokeh on thin curves
         float ign(vec2 px) {
           return fract(52.9829189 * fract(dot(px, vec2(0.06711056, 0.00583715))));
         }
@@ -153,7 +161,7 @@ const SkillsGraph2D = () => {
           float total = 0.0;
           float goldenAngle = 2.39996323;
           float jitter = ign(gl_FragCoord.xy) * 6.2831853;
-          for (int i = 0; i < 36; i++) {
+          for (int i = 0; i < 32; i++) {
             if (i >= uSamples) break;
             float r = sqrt((float(i) + 0.5) / float(uSamples)) * blurAmount;
             float theta = float(i) * goldenAngle + jitter;
@@ -242,6 +250,24 @@ const SkillsGraph2D = () => {
       glState.current.gl = null;
     }
 
+    const ensureOffscreenResolution = (highRes) => {
+      if (highRes === currentHighRes && glState.current.offscreenCanvas && glState.current.offscreenCanvas.width === texW) {
+        return;
+      }
+      currentHighRes = highRes;
+      texScale = computeScale(width, height, highRes);
+      texW = Math.max(1, Math.round(width * texScale));
+      texH = Math.max(1, Math.round(height * texScale));
+      if (glState.current.gl && glState.current.offscreenCanvas) {
+        glState.current.offscreenCanvas.width = texW;
+        glState.current.offscreenCanvas.height = texH;
+        const { gl, texture } = glState.current;
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texW, texH, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      }
+      textureDirty = true;
+    };
+
     // --- 2. Utility Functions ---
     const measureLabelWidth = (label, depth = 1) => {
       const ctx = glState.current.offscreenCtx || fallbackCtx2d;
@@ -257,7 +283,9 @@ const SkillsGraph2D = () => {
     const nodes_sim_ref = { current: [] };
     let textureDirty = true;
     let lastScrollY = window.scrollY;
+    let lastScrollBlur = -1;
     let scrollDirty = true;
+    let hiResTimer = null;
 
     // --- 3. Data Preparation ---
     const buildTree = () => {
@@ -332,7 +360,6 @@ const SkillsGraph2D = () => {
     const layout = layoutTree(treeData, { nodeWidth: 200, nodeHeight: 80, paddingX: 40 });
     const initialCenter = getCenter();
 
-    // Deterministic seeded jitter so initial layout is clean and reproducible
     nodes_sim_ref.current = layout.nodes.map((n, idx) => {
       const label = n.node.name;
       const isMobile = width < 768;
@@ -540,17 +567,15 @@ const SkillsGraph2D = () => {
       return Math.min(1.0, totalVel / (nodes.length * 2.0));
     };
 
-    // Pre-settle synchronously in ~2ms before first paint so the graph starts centered
-    // on all devices (including software WebGL and reduced-motion environments)
     for (let tick = 0; tick < 80; tick++) {
       stepPhysics(true);
     }
-    // Place initial focus spot on the center of the settled graph
     const settledCenter = getCenter();
     screenMouseRef.current = { x: settledCenter.cx / Math.max(1, width), y: settledCenter.cy / Math.max(1, height) };
 
-    const getLSDColor = (index, time, velFactor, depth = 1, baseHue = 0) => {
-      if (depth === 0) return '#ffffff';
+    // Returns "r, g, b" tuple string with zero regex work per frame
+    const getLSDRgbTuple = (index, time, velFactor, depth = 1, baseHue = 0) => {
+      if (depth === 0) return '255, 255, 255';
 
       const hue = depth === 1 ? baseHue : (baseHue + Math.sin(time * 0.0005 + index) * 15 + 360) % 360;
       let s = 0.4;
@@ -583,7 +608,7 @@ const SkillsGraph2D = () => {
         return p;
       };
 
-      return `rgb(${Math.round(f(h + 1 / 3) * 255)}, ${Math.round(f(h) * 255)}, ${Math.round(f(h - 1 / 3) * 255)})`;
+      return `${Math.round(f(h + 1 / 3) * 255)}, ${Math.round(f(h) * 255)}, ${Math.round(f(h - 1 / 3) * 255)}`;
     };
 
     function scheduleFrame() {
@@ -591,6 +616,17 @@ const SkillsGraph2D = () => {
         raf = requestAnimationFrame(animate);
       }
     }
+
+    const scheduleHiResUpgrade = () => {
+      if (hiResTimer) clearTimeout(hiResTimer);
+      hiResTimer = setTimeout(() => {
+        hiResTimer = null;
+        if (!dragging && !isPaused) {
+          ensureOffscreenResolution(true);
+          scheduleFrame();
+        }
+      }, 180);
+    };
 
     wakeUpRef.current = () => {
       textureDirty = true;
@@ -605,7 +641,8 @@ const SkillsGraph2D = () => {
       }
       width = newW;
       height = newH;
-      texScale = computeTexScale(width, height);
+      currentHighRes = true;
+      texScale = computeScale(width, height, true);
       texW = Math.max(1, Math.round(width * texScale));
       texH = Math.max(1, Math.round(height * texScale));
 
@@ -678,24 +715,35 @@ const SkillsGraph2D = () => {
       return { node: bestNode, worldPoint: p };
     };
 
+    const isNearAnyNode = (wx, wy) => {
+      const nodes = nodes_sim_ref.current;
+      const r2 = 220 * 220;
+      for (let i = 0; i < nodes.length; i++) {
+        const dx = nodes[i].x - wx;
+        const dy = nodes[i].y - wy;
+        if (dx * dx + dy * dy < r2) return true;
+      }
+      return false;
+    };
+
     const onPointerDown = e => {
       if (prefersReducedMotion || window.scrollY > height * 0.85) return;
       if (e.target.closest('a, button, input, textarea, header')) return;
-      lastInteractionTime.current = performance.now();
       const isTouch = e.pointerType === 'touch';
       const { node, worldPoint } = findNodeAtClientPoint(e.clientX, e.clientY, isTouch);
       if (node) {
+        if (hiResTimer) { clearTimeout(hiResTimer); hiResTimer = null; }
         dragging = node;
         node.fx = worldPoint.x;
         node.fy = worldPoint.y;
+        lastInteractionTime.current = performance.now();
+        scheduleFrame();
       }
-      scheduleFrame();
     };
 
     const onPointerMove = e => {
       if (prefersReducedMotion) return;
       if (window.scrollY > height * 1.1 && !dragging) return;
-      lastInteractionTime.current = performance.now();
       const rect = canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
@@ -706,8 +754,12 @@ const SkillsGraph2D = () => {
       if (dragging) {
         dragging.fx = p.x;
         dragging.fy = p.y;
+        lastInteractionTime.current = performance.now();
         if (e.cancelable) e.preventDefault();
+      } else if (isNearAnyNode(p.x, p.y)) {
+        lastInteractionTime.current = performance.now();
       }
+      // Always update shader spotlight immediately (0.2ms GPU cost even when physics is idle)
       scheduleFrame();
     };
 
@@ -726,15 +778,16 @@ const SkillsGraph2D = () => {
       if (e.target.closest('a, button, input, textarea, header')) return;
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
-      lastInteractionTime.current = performance.now();
       const { node, worldPoint } = findNodeAtClientPoint(t.clientX, t.clientY, true);
       if (node) {
+        if (hiResTimer) { clearTimeout(hiResTimer); hiResTimer = null; }
         dragging = node;
         node.fx = worldPoint.x;
         node.fy = worldPoint.y;
+        lastInteractionTime.current = performance.now();
         if (e.cancelable) e.preventDefault();
+        scheduleFrame();
       }
-      scheduleFrame();
     };
 
     const onTouchMove = e => {
@@ -755,10 +808,15 @@ const SkillsGraph2D = () => {
     };
 
     const onScroll = () => {
-      if (Math.abs(window.scrollY - lastScrollY) > 0.5) {
-        lastScrollY = window.scrollY;
-        scrollDirty = true;
-        scheduleFrame();
+      const sy = window.scrollY;
+      if (Math.abs(sy - lastScrollY) > 0.5) {
+        lastScrollY = sy;
+        const nextBlur = Math.min(sy / 800, 1);
+        // Once fully blurred below hero, skip redundant GPU draws while scrolling sections
+        if (Math.abs(nextBlur - lastScrollBlur) > 0.002) {
+          scrollDirty = true;
+          scheduleFrame();
+        }
       }
     };
 
@@ -785,7 +843,7 @@ const SkillsGraph2D = () => {
       }
     })();
 
-    const activeDurationMs = prefersReducedMotion || isSoftwareRenderer ? 0 : 2200;
+    const activeDurationMs = prefersReducedMotion || isSoftwareRenderer ? 0 : 1400;
 
     function animate() {
       raf = null;
@@ -797,9 +855,9 @@ const SkillsGraph2D = () => {
         perfState.current.fps = (perfState.current.frameCount * 1000) / (now - perfState.current.lastTime);
         perfState.current.frameCount = 0;
         perfState.current.lastTime = now;
-        const maxSamples = width < 768 ? 16 : 28;
+        const maxSamples = width < 768 ? 16 : 24;
         if (now - perfState.current.lastAdjustment > 2000) {
-          if (perfState.current.fps < 45 && glState.current.samples > 8) glState.current.samples -= 4;
+          if (perfState.current.fps < 48 && glState.current.samples > 8) glState.current.samples -= 4;
           else if (perfState.current.fps > 58 && glState.current.samples < maxSamples) glState.current.samples += 4;
           perfState.current.lastAdjustment = now;
         }
@@ -812,6 +870,8 @@ const SkillsGraph2D = () => {
       let energy = 0;
 
       if (isActivePhysics) {
+        // Drop to fast interactive resolution while moving for locked 60-120fps
+        ensureOffscreenResolution(false);
         energy = stepPhysics(false);
         textureDirty = true;
       }
@@ -826,46 +886,53 @@ const SkillsGraph2D = () => {
           const drawScale = useWebGL ? texScale : dpr;
           ctx2d.setTransform(drawScale, 0, 0, drawScale, 0, 0);
           ctx2d.imageSmoothingEnabled = true;
-          ctx2d.imageSmoothingQuality = 'high';
+          ctx2d.imageSmoothingQuality = currentHighRes ? 'high' : 'medium';
           ctx2d.clearRect(0, 0, width, height);
           ctx2d.save();
           ctx2d.translate(view.x, view.y);
           ctx2d.scale(view.scale, view.scale);
+          ctx2d.lineCap = 'round';
+          ctx2d.lineJoin = 'round';
 
-          links_sim.forEach((l, idx) => {
-            const color = getLSDColor(
-              idx,
-              now,
-              Math.min(1, (Math.hypot(l.source.vx, l.source.vy) + Math.hypot(l.target.vx, l.target.vy)) / 2 / (maxVelocity * 0.4)),
-              l.target.depth,
-              l.target.baseHue
-            );
-            const setAlpha = (c, a) =>
-              c.startsWith('rgba') ? c.replace(/,[\s\d.]+\)$/, `, ${a})`) : c.replace('rgb', 'rgba').replace(')', `, ${a})`);
-            const midX = (l.source.x + l.target.x) / 2;
-            const midY = (l.source.y + l.target.y) / 2;
+          for (let idx = 0; idx < links_sim.length; idx++) {
+            const l = links_sim[idx];
+            const vel = (Math.hypot(l.source.vx, l.source.vy) + Math.hypot(l.target.vx, l.target.vy)) * 0.5 / (maxVelocity * 0.4);
+            const rgb = getLSDRgbTuple(idx, now, Math.min(1, vel), l.target.depth, l.target.baseHue);
+            const midX = (l.source.x + l.target.x) * 0.5;
+            const midY = (l.source.y + l.target.y) * 0.5;
             const cpX = midX + (cx - midX) * 0.15;
             const cpY = midY + (cy - midY) * 0.15;
             const w = (l.source.depth === 0 ? 3.0 : l.source.depth === 1 ? 1.7 : 1.25) / view.scale;
-            ctx2d.lineCap = 'round';
-            ctx2d.lineJoin = 'round';
+
             ctx2d.beginPath();
             ctx2d.moveTo(l.source.x, l.source.y);
             ctx2d.quadraticCurveTo(cpX, cpY, l.target.x, l.target.y);
-            // Smooth 3-layer Gaussian-like cross-section eliminates sub-pixel aliasing on thin curves
-            ctx2d.strokeStyle = setAlpha(color, 0.08);
-            ctx2d.lineWidth = w * 4.5;
-            ctx2d.stroke();
-            ctx2d.strokeStyle = setAlpha(color, 0.22);
-            ctx2d.lineWidth = w * 2.1;
-            ctx2d.stroke();
-            ctx2d.strokeStyle = setAlpha(color, 0.56);
-            ctx2d.lineWidth = w;
-            ctx2d.stroke();
-          });
 
-          nodes.forEach((n, idx) => {
-            const color = getLSDColor(idx, now, Math.min(1, Math.hypot(n.vx, n.vy) / (maxVelocity * 0.4)), n.depth, n.baseHue);
+            if (currentHighRes) {
+              ctx2d.strokeStyle = `rgba(${rgb}, 0.08)`;
+              ctx2d.lineWidth = w * 4.5;
+              ctx2d.stroke();
+              ctx2d.strokeStyle = `rgba(${rgb}, 0.22)`;
+              ctx2d.lineWidth = w * 2.1;
+              ctx2d.stroke();
+              ctx2d.strokeStyle = `rgba(${rgb}, 0.56)`;
+              ctx2d.lineWidth = w;
+              ctx2d.stroke();
+            } else {
+              ctx2d.strokeStyle = `rgba(${rgb}, 0.14)`;
+              ctx2d.lineWidth = w * 3.5;
+              ctx2d.stroke();
+              ctx2d.strokeStyle = `rgba(${rgb}, 0.56)`;
+              ctx2d.lineWidth = w * 1.1;
+              ctx2d.stroke();
+            }
+          }
+
+          ctx2d.strokeStyle = 'rgba(5, 5, 5, 0.9)';
+          for (let idx = 0; idx < nodes.length; idx++) {
+            const n = nodes[idx];
+            const rgb = getLSDRgbTuple(idx, now, Math.min(1, Math.hypot(n.vx, n.vy) / (maxVelocity * 0.4)), n.depth, n.baseHue);
+            const color = `rgb(${rgb})`;
 
             if (n.depth !== 0) {
               ctx2d.fillStyle = color;
@@ -875,9 +942,6 @@ const SkillsGraph2D = () => {
               ctx2d.arc(n.x, n.y, (dotSize * n.hoverInfluence) / view.scale, 0, Math.PI * 2);
               ctx2d.fill();
             }
-
-            ctx2d.strokeStyle = 'rgba(5, 5, 5, 0.9)';
-            ctx2d.lineJoin = 'round';
 
             if (n.depth === 0) {
               if (rootImageRef.current) {
@@ -908,7 +972,7 @@ const SkillsGraph2D = () => {
               ctx2d.fillStyle = color;
               ctx2d.fillText(n.name, n.x, n.y - 12 / view.scale);
             }
-          });
+          }
           ctx2d.restore();
 
           if (useWebGL) {
@@ -922,15 +986,19 @@ const SkillsGraph2D = () => {
 
       if (glState.current.gl) {
         const { gl, program, texture, buffer, uniforms, posLoc, offscreenCanvas } = glState.current;
+        const scrollRatio = Math.min(window.scrollY / 800, 1);
+        lastScrollBlur = scrollRatio;
         gl.useProgram(program);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.uniform2f(uniforms.uResolution, offscreenCanvas.width, offscreenCanvas.height);
         gl.uniform2f(uniforms.uCanvasRes, canvas.width, canvas.height);
         gl.uniform1f(uniforms.uRadius, (prefersReducedMotion ? 0 : 10 + energy * 20) * texScale);
-        gl.uniform1f(uniforms.uScrollBlur, Math.min(window.scrollY / 800, 1) * 40 * texScale);
+        gl.uniform1f(uniforms.uScrollBlur, scrollRatio * 40 * texScale);
         gl.uniform1f(uniforms.uEnergy, energy);
         gl.uniform1f(uniforms.uTime, now / 1000);
-        const renderSamples = isActivePhysics ? Math.min(glState.current.samples, isMobile ? 16 : 24) : (isMobile ? 20 : 36);
+        const renderSamples = isActivePhysics
+          ? Math.min(glState.current.samples, isMobile ? 12 : 16)
+          : (isMobile ? 18 : 30);
         gl.uniform1i(uniforms.uSamples, renderSamples);
         gl.uniform2f(uniforms.uMouse, screenMouseRef.current.x, screenMouseRef.current.y);
         gl.enableVertexAttribArray(posLoc);
@@ -943,8 +1011,14 @@ const SkillsGraph2D = () => {
 
       if (isActivePhysics && (energy >= STABLE_ENERGY_THRESHOLD || now - lastInteractionTime.current <= activeDurationMs || dragging)) {
         scheduleFrame();
-      } else if (scrollDirty) {
-        scheduleFrame();
+      } else {
+        // Settled — upgrade to crisp SSAA once interaction stops
+        if (!currentHighRes && !dragging) {
+          scheduleHiResUpgrade();
+        }
+        if (scrollDirty) {
+          scheduleFrame();
+        }
       }
     }
 
@@ -963,6 +1037,7 @@ const SkillsGraph2D = () => {
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      if (hiResTimer) clearTimeout(hiResTimer);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
